@@ -103,12 +103,12 @@ Since we are waiting for the docs to be finished how to create a credential foll
 
 Make sure you copy the value of the credential URL after you created the credential in the portal. 
 [INSERT SCREENSHOT FROM CREATED CREDENTIAL HERE]
-Copy the URL in the `CredentialManifest` part of the `appsettings.json`. 
-You need to manually copy your Microsoft AAD Verifiable Credential service created Decentralized Identifier (did:ion..) value from this page as well and paste that in the appsettings.json file for `IssuerAuthority` and `VerifierAuthority`.
+Copy the URL in the `CredentialManifest` part of the `run.cmd` and/or `run.sh`. If you plan to use docker, copy it to `docker-run.cmd` and/or `docker-run.sh`. 
+You need to manually copy your Microsoft AAD Verifiable Credential service created Decentralized Identifier (did:ion..) value from this page as well and paste that in the `run.cmd` and/or `run.sh` file for `IssuerAuthority` and `VerifierAuthority`. If you plan to use docker, copy it to `docker-run.cmd` and/or `docker-run.sh`
 
 ### API Payloads
 The API is called with special payloads for issuing and verifying verifiable credentials. The sample payload files are modified by the sample code by copying the correct values defined in the `appliction.properties` file and set as environment variables before you run the app.
-If you want to modify the payloads `issuance_request_config.json` and `presentation_request_config.json` files yourself, make sure you comment out the code overwriting the values in the VerifierController.cs and IssuerController.cs files. The code overwrites the Authority, Manifest and trustedIssuers values. The callback URI is modified in code to match your hostname.
+If you want to modify the payloads `issuance_request_config.json` and `presentation_request_config.json` files yourself, make sure you comment out the code overwriting the values in the VerifierController.java and IssuerController.java files. The code overwrites the Authority, Manifest and trustedIssuers values. The callback URI is modified in code to match your hostname.
 
 The file [run.cmd](run.cmd) is a template for setting all environment variables and running your Java Springbot application.
 Make sure you change the values for `AADVC.TenantId`, `AADVC.ClientID` and `AADVC.ClientSecret` and set the to the values from th eapp registration you created above. Then, there are two other variables that references files used as templates for issuance and verification. You need to update them too. 
