@@ -1,5 +1,5 @@
 {
-  "authority": "...set at runtime...",
+  "authority": "did:ion: THIS IS YOUR DID FROM THE VC PAGE IN AZURE PORTAL ...set at runtime...",
   "includeQRCode": false,
   "registration": {
     "clientName": "Verifiable Credential Expert Sample"
@@ -8,19 +8,19 @@
     "url": "...set at runtime...",
     "state": "...set at runtime...",
     "headers": {
-      "my-api-key": "blabla"
+      "my-api-key": "OPTIONAL API-KEY for ISSUANCE CALLBACK API"
     }
   },
   "issuance": {
     "type": "VerifiedCredentialExpert",
-    "manifest": "...set at runtime...",
+    "manifest": "CREDENTIAL URL ...set at runtime...",
     "pin": {
-      "value": "9999",
+      "value": "123456",
       "length": 4
     },
     "claims": {
-      "displayName": "Ringo Starr",
-      "sponsorName": "John Lennon"
+      "given_name": "FIRSTNAME",
+      "family_name": "LASTNAME"
     }
   }
 }
