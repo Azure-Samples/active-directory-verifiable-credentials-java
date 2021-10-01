@@ -44,9 +44,6 @@ public class VerifierController {
     @Value("${aadvc_TenantId}")
     private String tenantId;
 
-    @Value("${aadvc_ApiKey}")
-    private String apiKey;
-
     @Value("${aadvc_scope}")
     private String scope;
 
@@ -173,16 +170,11 @@ public class VerifierController {
             ((ObjectNode)rootNode).put("authority", verifierAuthority );
             ((ObjectNode)(rootNode.path("callback"))).put("url", callback );
             ((ObjectNode)(rootNode.path("callback"))).put("state", correlationId );
-            ((ObjectNode)(rootNode.path("callback").path("headers"))).put("my-api-key", apiKey );
-            // get the manifest from the application.properties (envvars), this is the URL to the credential created in the azure portal. 
-            // the display and rules file to create the credential can be dound in the credentialfiles directory
-            // make sure the credentialtype in the issuance payload ma
-            ((ObjectNode)(rootNode.path("presentation").path("requestedCredentials").get(0))).put("manifest", credentialManifest );
-            // copy the issuerDID from the settings and fill in the trustedIssuer part of the payload
+            // copy the issuerDID from the settings and fill in the acceptedIssuer part of the payload
             // this means only that issuer should be trusted for the requested credentialtype
             // this value is an array in the payload, you can trust multiple issuers for the same credentialtype
             // very common to accept the test VCs and the Production VCs coming from different verifiable credential services
-            ((ArrayNode)(rootNode.path("presentation").path("requestedCredentials").get(0).path("trustedIssuers"))).set( 0, new TextNode( issuerAuthority ) );
+            ((ArrayNode)(rootNode.path("presentation").path("requestedCredentials").get(0).path("acceptedIssuers"))).set( 0, new TextNode( issuerAuthority ) );
             String payload = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode);
             responseBody = callVCClientAPI( payload );
             JsonNode apiResponse = objectMapper.readTree( responseBody );

@@ -43,9 +43,6 @@ public class IssuerController {
     @Value("${aadvc_TenantId}")
     private String tenantId;
 
-    @Value("${aadvc_ApiKey}")
-    private String apiKey;
-
     @Value("${aadvc_scope}")
     private String scope;
 
@@ -180,7 +177,6 @@ public class IssuerController {
             ((ObjectNode)(rootNode.path("callback"))).put("url", callback );
             // modify payload with new state, the state is used to be able to update the UI when callbacks are received from the VC Service
             ((ObjectNode)(rootNode.path("callback"))).put("state", correlationId );
-            ((ObjectNode)(rootNode.path("callback").path("headers"))).put("my-api-key", apiKey );
             // get the manifest from the application.properties (envvars), this is the URL to the credential created in the azure portal. 
             // the display and rules file to create the credential can be dound in the credentialfiles directory
             // make sure the credentialtype in the issuance payload ma
@@ -197,8 +193,8 @@ public class IssuerController {
                 }
             }
             // here you could change the payload manifest and change the firstname and lastname
-            ((ObjectNode)(rootNode.path("issuance").path("claims"))).put("firstName", "Forrest" );
-            ((ObjectNode)(rootNode.path("issuance").path("claims"))).put("lastName", "Gump" );
+            ((ObjectNode)(rootNode.path("issuance").path("claims"))).put("firstName", "Megan" );
+            ((ObjectNode)(rootNode.path("issuance").path("claims"))).put("lastName", "Bowen" );
             // The VC Request API is an authenticated API. We need to clientid and secret to create an access token which 
             // needs to be send as bearer to the VC Request API
             payload = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode);
