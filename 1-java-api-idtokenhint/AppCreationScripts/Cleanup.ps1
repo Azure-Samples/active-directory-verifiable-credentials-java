@@ -50,7 +50,7 @@ This function removes the Azure AD applications for the sample. These applicatio
     Write-Host "Cleaning-up applications from tenant '$tenantName'"
 
     Write-Host "Removing 'client' (Verifiable Credentials ASP.Net core sample if needed"
-    $app=Get-AzureADApplication -Filter "DisplayName eq 'Verifiable Credentials ASP.Net core sample'"  
+    $app=Get-AzureADApplication -Filter "DisplayName eq 'Verifiable Credentials Java sample'"  
 
     if ($app)
     {
