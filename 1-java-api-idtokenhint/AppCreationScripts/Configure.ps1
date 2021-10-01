@@ -168,7 +168,7 @@ Function ConfigureApplications
     $user = Get-AzureADUser -ObjectId $creds.Account.Id
 
    # Create the client AAD application
-   Write-Host "Creating the AAD application (Verifiable Credentials ASP.Net core sample)"
+   Write-Host "Creating the AAD application (Verifiable Credentials Java core sample)"
    # Get a 2 years application key for the client Application
    $pw = ComputePassword
    $fromDate = [DateTime]::Now;
@@ -190,7 +190,7 @@ Function ConfigureApplications
     Write-Host "'$($user.UserPrincipalName)' added as an application owner to app '$($clientServicePrincipal.DisplayName)'"
    }
 
-   Write-Host "Done creating the client application (VC Asp.net core sample)"
+   Write-Host "Done creating the client application (VC Java core sample)"
 
    # URL of the AAD application in the Azure portal
    # Future? $clientPortalUrl = "https://portal.azure.com/#@"+$tenantName+"/blade/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/Overview/appId/"+$clientAadApplication.AppId+"/objectId/"+$clientAadApplication.ObjectId+"/isMSAApp/"
