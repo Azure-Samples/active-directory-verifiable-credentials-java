@@ -47,6 +47,9 @@ public class VerifierController {
     @Value("${aadvc_scope}")
     private String scope;
 
+    @Value("${aadvc_ApiKey}")
+    private String apiKey;
+
     @Value("${aadvc_ClientId}")
     private String clientId;
     
@@ -146,6 +149,7 @@ public class VerifierController {
      * @param headers
      * @return JSON object with the address to the presentation request and optionally a QR code and a state value which can be used to check on the response status
      */
+    @CrossOrigin(origins = "*") // needed for B2C
     @GetMapping("/api/verifier/presentation-request")
     public ResponseEntity<String> presentationRequest( HttpServletRequest request, @RequestHeader HttpHeaders headers ) {
         traceHttpRequest( request );
@@ -170,6 +174,8 @@ public class VerifierController {
             ((ObjectNode)rootNode).put("authority", verifierAuthority );
             ((ObjectNode)(rootNode.path("callback"))).put("url", callback );
             ((ObjectNode)(rootNode.path("callback"))).put("state", correlationId );
+            // set our api-key so we check that callbacks are legitimate
+            ((ObjectNode)(rootNode.path("callback").path("headers"))).put("api-key", apiKey );
             // copy the issuerDID from the settings and fill in the acceptedIssuer part of the payload
             // this means only that issuer should be trusted for the requested credentialtype
             // this value is an array in the payload, you can trust multiple issuers for the same credentialtype
@@ -209,6 +215,11 @@ public class VerifierController {
         lgr.info( body );
         ObjectMapper objectMapper = new ObjectMapper();
         try {
+            // we need to get back our api-key in the header to make sure we don't accept unsolicited calls
+            if ( !request.getHeader("api-key").equals(apiKey) ) {
+                lgr.info( "api-key wrong or missing" );
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body( "api-key wrong or missing" );
+            }
             JsonNode presentationResponse = objectMapper.readTree( body );
             String code = presentationResponse.path("code").asText();
             ObjectNode data = null;
@@ -232,6 +243,7 @@ public class VerifierController {
                 data.put("subject", presentationResponse.path("subject").asText() );
                 data.put("firstName", presentationResponse.path("issuers").get(0).path("claims").path("firstName").asText() );
                 data.put("lastName", presentationResponse.path("issuers").get(0).path("claims").path("lastName").asText() );
+                data.set("presentationResponse", presentationResponse );
             }
             if ( data != null ) {
                 data.put("status", code );
@@ -254,6 +266,7 @@ public class VerifierController {
      * @param id the correlation id that was set in the state attribute in the payload
      * @return response to the browser on the progress of the issuance
      */
+    @CrossOrigin(origins = "*") // needed for B2C
     @GetMapping("/api/verifier/presentation-response")
     public ResponseEntity<String> presentationResponseStatus( HttpServletRequest request
                                                             , @RequestHeader HttpHeaders headers
@@ -283,6 +296,61 @@ public class VerifierController {
         return ResponseEntity.ok()
           .headers(responseHeaders)
           .body( responseBody );
+    }
+     /**
+     * B2C REST API Endpoint for retrieveing the VC presentation response
+     * @param request POST Request that comes from B2C 
+     * @param headers
+     * @param body The InputClaims from the B2C policy. It will only be one claim named 'id'
+     * @return a JSON structure with claims from the VC presented
+     */
+    @RequestMapping(value = "/api/verifier/presentation-response-b2c", method = RequestMethod.POST, produces = "application/json", consumes = "application/json")
+    public ResponseEntity<String> presentationResponseB2C( HttpServletRequest request
+                                                             , @RequestHeader HttpHeaders headers
+                                                             , @RequestBody String body ) {
+        traceHttpRequest( request );
+        lgr.info( body );
+        String responseBody = "";
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode b2cRequest = objectMapper.readTree( body );
+            String id = b2cRequest.path("id").asText();
+            String data = cache.getIfPresent( id ); 
+            if ( (data == null || data.isEmpty()) ) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body( formatB2CError( "Verifiable Credentials not presented" ) );
+            } 
+            JsonNode cacheData = objectMapper.readTree( data  );
+            String didSubject = cacheData.path("presentationResponse").path("subject").asText();
+            // vcKey is the shorthand did but with the colon chars replaced with a period.
+            // Reason for this is if you want to store it as a way to signin, you need to add it
+            // to the identities collection on the userProfile, the issuerAssignedId does not allow the colon char
+            String vcKey = didSubject.replace("did:ion:", "did.ion.").split(":")[0];
+            // The type collection always 2..n entries where [0] is the generic base type 'VerifiableCredentials'.
+            // We take the last type to pass back for simplicity
+            String credentialType = "";
+            for (JsonNode arrayElement : cacheData.path("presentationResponse").path("issuers").get(0).path("type")) {
+                credentialType = arrayElement.asText();
+            }
+            // get the claims from the VC and add a few extra claims that we pass back to B2C
+            JsonNode vcClaims = cacheData.path("presentationResponse").path("issuers").get(0).path("claims");
+            ((ObjectNode)vcClaims).put("vcType", credentialType);
+            ((ObjectNode)vcClaims).put("vcIss", cacheData.path("presentationResponse").path("subject").asText() );
+            ((ObjectNode)vcClaims).put("vcSub", didSubject);
+            ((ObjectNode)vcClaims).put("vcKey", vcKey );
+            responseBody = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(vcClaims);
+        } catch (java.io.IOException ex) {
+            ex.printStackTrace();
+            return ResponseEntity.status(HttpStatus.CONFLICT).body( formatB2CError( "Technical error" ) );
+        }     
+        HttpHeaders responseHeaders = new HttpHeaders();
+        responseHeaders.set("Content-Type", "application/json");    
+        return ResponseEntity.ok()
+          .headers(responseHeaders)
+          .body( responseBody );
+    }
+
+    private String formatB2CError( String message ) {
+        return "{\"version\": \"1.0.0\", \"status\": 400, \"userMessage\": \"{0}}\"}".replace( "{0}", message );
     }
 
 } // cls

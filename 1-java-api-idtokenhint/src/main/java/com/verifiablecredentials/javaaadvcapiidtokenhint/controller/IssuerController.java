@@ -46,6 +46,9 @@ public class IssuerController {
     @Value("${aadvc_scope}")
     private String scope;
 
+    @Value("${aadvc_ApiKey}")
+    private String apiKey;
+
     @Value("${aadvc_ClientId}")
     private String clientId;
     
@@ -177,6 +180,8 @@ public class IssuerController {
             ((ObjectNode)(rootNode.path("callback"))).put("url", callback );
             // modify payload with new state, the state is used to be able to update the UI when callbacks are received from the VC Service
             ((ObjectNode)(rootNode.path("callback"))).put("state", correlationId );
+            // set our api-key so we check that callbacks are legitimate
+            ((ObjectNode)(rootNode.path("callback").path("headers"))).put("api-key", apiKey );
             // get the manifest from the application.properties (envvars), this is the URL to the credential created in the azure portal. 
             // the display and rules file to create the credential can be dound in the credentialfiles directory
             // make sure the credentialtype in the issuance payload ma
@@ -232,6 +237,11 @@ public class IssuerController {
         lgr.info( body );
         ObjectMapper objectMapper = new ObjectMapper();
         try {
+            // we need to get back our api-key in the header to make sure we don't accept unsolicited calls
+            if ( !request.getHeader("api-key").equals(apiKey) ) {
+                lgr.info( "api-key wrong or missing" );
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body( "api-key wrong or missing" );
+            }
             JsonNode presentationResponse = objectMapper.readTree( body );
             String code = presentationResponse.path("code").asText();
             ObjectNode data = null;
