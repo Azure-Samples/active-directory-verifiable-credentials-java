@@ -94,7 +94,7 @@ This callback is typically used to notify the user on the issuance website the p
   "state": "...what you passed as the state value..."
 }
 ```
-### Unuccesful Issuance flow response
+### Unsuccesful Issuance flow response
 ```JSON
 {
   "code":"issuance_failed",
