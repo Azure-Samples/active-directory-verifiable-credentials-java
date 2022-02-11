@@ -4,10 +4,20 @@ import java.util.*;
 import java.util.logging.*;
 import java.util.concurrent.*;
 import java.util.stream.*;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 //import java.text.*;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.security.spec.PKCS8EncodedKeySpec;
+
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import javax.servlet.http.HttpServletRequest;
@@ -55,6 +65,15 @@ public class IssuerController {
     @Value("${aadvc_ClientSecret}")
     private String clientSecret;
     
+    @Value("${aadvc_CertName}")
+    private String certName;
+    
+    @Value("${aadvc_CertLocation}")
+    private String certLocation;
+    
+    @Value("${aadvc_CertKeyLocation}")
+    private String certKeyLocation;
+    
     @Value("${aadvc_Authority}")
     private String aadAuthority;
 
@@ -97,8 +116,7 @@ public class IssuerController {
         try {
             accessToken = cache.getIfPresent( "MSALAccessToken" );
             if ( accessToken == null || accessToken.isEmpty() ) {
-                lgr.info( "MSAL Acquire AccessToken via Client Credentials" );
-                accessToken = getAccessTokenByClientCredentialGrant();
+                accessToken = getMSALAccessToken(); //ByClientCredentialGrant();
                 lgr.info( accessToken );
                 cache.put( "MSALAccessToken", accessToken );
             }
@@ -128,15 +146,30 @@ public class IssuerController {
         return String.format( String.format("%%0%dd", length), pin );
     }  
     
-    private String getAccessTokenByClientCredentialGrant() throws Exception {
+    private String getMSALAccessToken() throws Exception {
         String authority = aadAuthority.replace("{0}", tenantId );
         lgr.info( aadAuthority );
         lgr.info( authority );
-        ConfidentialClientApplication app = ConfidentialClientApplication.builder(
+        ConfidentialClientApplication app = null;
+        if ( certName.isEmpty() ) {
+            lgr.info( "MSAL Acquire AccessToken via Client Credentials" );
+            app = ConfidentialClientApplication.builder(
                 clientId,
                 ClientCredentialFactory.createFromSecret(clientSecret))
                 .authority(authority)
                 .build();
+        } else {
+            lgr.info( "MSAL Acquire AccessToken via Certificate" );
+            PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(Files.readAllBytes(Paths.get(certKeyLocation)));
+            PrivateKey key = KeyFactory.getInstance("RSA").generatePrivate(spec);    
+            java.io.InputStream certStream = (java.io.InputStream)new ByteArrayInputStream(Files.readAllBytes(Paths.get(certLocation)));
+            X509Certificate cert = (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(certStream);            
+            app = ConfidentialClientApplication.builder(
+                   clientId,
+                   ClientCredentialFactory.createFromCertificate(key, cert))
+                   .authority(authority)
+                   .build();
+        }
         ClientCredentialParameters clientCredentialParam = ClientCredentialParameters.builder(
                 Collections.singleton(scope))
                 .build();
