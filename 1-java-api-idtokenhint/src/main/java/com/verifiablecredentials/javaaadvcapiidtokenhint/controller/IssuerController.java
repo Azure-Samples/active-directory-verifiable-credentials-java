@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import javax.servlet.http.HttpServletRequest;
 //import javax.servlet.http.HttpServletResponse;
 import org.springframework.http.*;
+import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.bind.annotation.*;
@@ -61,19 +62,19 @@ public class IssuerController {
 
     @Value("${aadvc_ClientId}")
     private String clientId;
-    
+
     @Value("${aadvc_ClientSecret}")
     private String clientSecret;
-    
+
     @Value("${aadvc_CertName}")
     private String certName;
-    
+
     @Value("${aadvc_CertLocation}")
     private String certLocation;
-    
+
     @Value("${aadvc_CertKeyLocation}")
     private String certKeyLocation;
-    
+
     @Value("${aadvc_Authority}")
     private String aadAuthority;
 
@@ -93,14 +94,14 @@ public class IssuerController {
     public static void traceHttpRequest( HttpServletRequest request ) {
         String method = request.getMethod();
         String requestURL = request.getRequestURL().toString();
-        String queryString = request.getQueryString();    
+        String queryString = request.getQueryString();
         if (queryString != null) {
             requestURL += "?" + queryString;
         }
         lgr.info( method + " " + requestURL );
     }
 
-    private static String readFileAllText(String filePath) 
+    private static String readFileAllText(String filePath)
     {
         StringBuilder contentBuilder = new StringBuilder();
         try (Stream<String> stream = Files.lines( Paths.get(filePath), StandardCharsets.UTF_8)) {
@@ -110,7 +111,7 @@ public class IssuerController {
         }
         return contentBuilder.toString();
     }
-    
+
     private String callVCClientAPI( String payload ) {
         String accessToken = "";
         try {
@@ -134,7 +135,7 @@ public class IssuerController {
                                                     .accept(MediaType.APPLICATION_JSON)
                                                     .body(BodyInserters.fromObject(payload))
                                                     .retrieve();
-        String responseBody = responseSpec.bodyToMono(String.class).block();    
+        String responseBody = responseSpec.bodyToMono(String.class).block();
         lgr.info( responseBody );
         return responseBody;
     }
@@ -144,8 +145,8 @@ public class IssuerController {
         int max = (int)(Integer.parseInt( "999999999999999999999".substring(0, length) ));
         Integer pin = (Integer)(int)((Math.random() * (max - min)) + min);
         return String.format( String.format("%%0%dd", length), pin );
-    }  
-    
+    }
+
     private String getMSALAccessToken() throws Exception {
         String authority = aadAuthority.replace("{0}", tenantId );
         lgr.info( aadAuthority );
@@ -161,9 +162,9 @@ public class IssuerController {
         } else {
             lgr.info( "MSAL Acquire AccessToken via Certificate" );
             PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(Files.readAllBytes(Paths.get(certKeyLocation)));
-            PrivateKey key = KeyFactory.getInstance("RSA").generatePrivate(spec);    
+            PrivateKey key = KeyFactory.getInstance("RSA").generatePrivate(spec);
             java.io.InputStream certStream = (java.io.InputStream)new ByteArrayInputStream(Files.readAllBytes(Paths.get(certLocation)));
-            X509Certificate cert = (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(certStream);            
+            X509Certificate cert = (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(certStream);
             app = ConfidentialClientApplication.builder(
                    clientId,
                    ClientCredentialFactory.createFromCertificate(key, cert))
@@ -176,7 +177,7 @@ public class IssuerController {
         CompletableFuture<IAuthenticationResult> future = app.acquireToken(clientCredentialParam);
         IAuthenticationResult result = future.get();
         return result.accessToken();
-    }    
+    }
 
     /**
      * This method is called from the UI to initiate the issuance of the verifiable credential
@@ -184,7 +185,7 @@ public class IssuerController {
      * @param headers
      * @return JSON object with the address to the presentation request and optionally a QR code and a state value which can be used to check on the response status
      */
-    @GetMapping("/api/issuer/issuance-request")    
+    @GetMapping("/api/issuer/issuance-request")
     public ResponseEntity<String> issueRequest( HttpServletRequest request, @RequestHeader HttpHeaders headers ) {
         traceHttpRequest( request );
         // payload is loaded from file and then partly modified here
@@ -194,7 +195,7 @@ public class IssuerController {
             jsonRequest = readFileAllText( IssuanceJsonFile );
         }
         if ( jsonRequest == null || jsonRequest.isEmpty() ) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body( "Issuance request file not found" );        
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body( "Issuance request file not found" );
         }
         String callback = getBasePath( request ) + "api/issuer/issue-request-callback";
         String correlationId = java.util.UUID.randomUUID().toString();
@@ -205,8 +206,11 @@ public class IssuerController {
         String responseBody = "";
         try {
             JsonNode rootNode = objectMapper.readTree( jsonRequest );
+            if (fromMobile(request)) {
+                ((ObjectNode)(rootNode.path("issuance"))).remove("pin");
+            }
             ((ObjectNode)rootNode).put("authority", issuerAuthority );
-            // modify the callback method to make it easier to debug 
+            // modify the callback method to make it easier to debug
             // with tools like ngrok since the URI changes all the time
             // this way you don't need to modify the callback URL in the payload every time
             // ngrok changes the URI
@@ -215,7 +219,7 @@ public class IssuerController {
             ((ObjectNode)(rootNode.path("callback"))).put("state", correlationId );
             // set our api-key so we check that callbacks are legitimate
             ((ObjectNode)(rootNode.path("callback").path("headers"))).put("api-key", apiKey );
-            // get the manifest from the application.properties (envvars), this is the URL to the credential created in the azure portal. 
+            // get the manifest from the application.properties (envvars), this is the URL to the credential created in the azure portal.
             // the display and rules file to create the credential can be dound in the credentialfiles directory
             // make sure the credentialtype in the issuance payload ma
             ((ObjectNode)(rootNode.path("issuance"))).put("manifest", credentialManifest );
@@ -233,7 +237,7 @@ public class IssuerController {
             // here you could change the payload manifest and change the firstname and lastname
             ((ObjectNode)(rootNode.path("issuance").path("claims"))).put("firstName", "Megan" );
             ((ObjectNode)(rootNode.path("issuance").path("claims"))).put("lastName", "Bowen" );
-            // The VC Request API is an authenticated API. We need to clientid and secret to create an access token which 
+            // The VC Request API is an authenticated API. We need to clientid and secret to create an access token which
             // needs to be send as bearer to the VC Request API
             payload = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode);
             responseBody = callVCClientAPI( payload );
@@ -246,13 +250,18 @@ public class IssuerController {
         } catch (java.io.IOException ex) {
             ex.printStackTrace();
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body( "Technical error" );
-        }    
-        
+        }
+
         HttpHeaders responseHeaders = new HttpHeaders();
-        responseHeaders.set("Content-Type", "application/json");    
+        responseHeaders.set("Content-Type", "application/json");
         return ResponseEntity.ok()
           .headers(responseHeaders)
           .body( responseBody );
+    }
+
+    private boolean fromMobile(HttpServletRequest request) {
+        String userAgent = Optional.ofNullable(request.getHeader(HttpHeaders.USER_AGENT)).orElse("").toLowerCase(Locale.ROOT);
+        return  userAgent.contains("android") || userAgent.contains("iphone");
     }
 
     /**
@@ -302,7 +311,7 @@ public class IssuerController {
         } catch (java.io.IOException ex) {
             ex.printStackTrace();
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body( "Technical error" );
-        }            
+        }
         return ResponseEntity.ok()
           .body( "{}" );
     }
@@ -334,10 +343,10 @@ public class IssuerController {
             } catch (java.io.IOException ex) {
                 ex.printStackTrace();
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body( "Technical error" );
-            }    
+            }
         }
         HttpHeaders responseHeaders = new HttpHeaders();
-        responseHeaders.set("Content-Type", "application/json");    
+        responseHeaders.set("Content-Type", "application/json");
         return ResponseEntity.ok()
           .headers(responseHeaders)
           .body( responseBody );
