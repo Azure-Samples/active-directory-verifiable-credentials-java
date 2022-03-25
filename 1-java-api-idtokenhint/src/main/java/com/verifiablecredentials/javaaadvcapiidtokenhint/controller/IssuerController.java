@@ -152,7 +152,7 @@ public class IssuerController {
         lgr.info( aadAuthority );
         lgr.info( authority );
         ConfidentialClientApplication app = null;
-        if ( certName.isEmpty() ) {
+        if ( !clientSecret.isEmpty() ) {
             lgr.info( "MSAL Acquire AccessToken via Client Credentials" );
             app = ConfidentialClientApplication.builder(
                 clientId,
@@ -235,8 +235,10 @@ public class IssuerController {
                 }
             }
             // here you could change the payload manifest and change the firstname and lastname
-            ((ObjectNode)(rootNode.path("issuance").path("claims"))).put("firstName", "Megan" );
-            ((ObjectNode)(rootNode.path("issuance").path("claims"))).put("lastName", "Bowen" );
+            if ( rootNode.path("issuance").has("claims") ) {
+                ((ObjectNode)(rootNode.path("issuance").path("claims"))).put("firstName", "Megan" );
+                ((ObjectNode)(rootNode.path("issuance").path("claims"))).put("lastName", "Bowen" );
+            }
             // The VC Request API is an authenticated API. We need to clientid and secret to create an access token which
             // needs to be send as bearer to the VC Request API
             payload = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode);
