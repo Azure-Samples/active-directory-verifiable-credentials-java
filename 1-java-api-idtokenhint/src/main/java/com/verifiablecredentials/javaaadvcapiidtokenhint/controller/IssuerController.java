@@ -234,10 +234,10 @@ public class IssuerController {
                     ((ObjectNode)(rootNode.path("issuance").path("pin"))).put("value", pinCode );
                 }
             }
-            // here you could change the payload manifest and change the firstname and lastname
+            // here you could change the payload manifest and change the firstname and lastname. The fieldNames should match your Rules definition
             if ( rootNode.path("issuance").has("claims") ) {
-                ((ObjectNode)(rootNode.path("issuance").path("claims"))).put("firstName", "Megan" );
-                ((ObjectNode)(rootNode.path("issuance").path("claims"))).put("lastName", "Bowen" );
+                ((ObjectNode)(rootNode.path("issuance").path("claims"))).put("given_name", "Megan" );
+                ((ObjectNode)(rootNode.path("issuance").path("claims"))).put("family_name", "Bowen" );
             }
             // The VC Request API is an authenticated API. We need to clientid and secret to create an access token which
             // needs to be send as bearer to the VC Request API
