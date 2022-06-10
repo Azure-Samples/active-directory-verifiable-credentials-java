@@ -149,7 +149,7 @@ public class VerifierController {
         lgr.info( aadAuthority );
         lgr.info( authority );
         ConfidentialClientApplication app = null;
-        if ( certName.isEmpty() ) {
+        if ( !clientSecret.isEmpty() ) {
             lgr.info( "MSAL Acquire AccessToken via Client Credentials" );
             app = ConfidentialClientApplication.builder(
                 clientId,
