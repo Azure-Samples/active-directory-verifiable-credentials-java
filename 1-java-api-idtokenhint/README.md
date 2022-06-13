@@ -88,8 +88,8 @@ You need to manually copy your Microsoft AAD Verifiable Credential service creat
 The API is called with special payloads for issuing and verifying verifiable credentials. The sample payload files are modified by the sample code by copying the correct values defined in the `appliction.properties` file and set as environment variables before you run the app.
 If you want to modify the payloads `issuance_request_config.json` and `presentation_request_config.json` files yourself, make sure you comment out the code overwriting the values in the VerifierController.java and IssuerController.java files. The code overwrites the Authority, Manifest and trustedIssuers values. The callback URI is modified in code to match your hostname.
 
-The file [run.cmd](run.cmd) is a template for setting all environment variables and running your Java Springbot application.
-Make sure you change the values for `AADVC.TenantId`, `AADVC.ClientID` and `AADVC.ClientSecret` and set the to the values from th eapp registration you created above. Then, there are two other variables that references files used as templates for issuance and verification. You need to update them too. 
+The file [run.cmd](run.cmd) is a template for setting all environment variables and running your Java Spring Boot application.
+Make sure you change the values for `AADVC.TenantId`, `AADVC.ClientID` and `AADVC.ClientSecret` and set them to the values from the app registration you created above. Then, there are two other variables that reference files used as templates for issuance and verification. You need to update them too. 
 
 ## Running the sample
 
