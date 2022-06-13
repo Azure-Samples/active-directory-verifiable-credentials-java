@@ -11,7 +11,7 @@ set AADVC_PRESENTATIONFILE=%cd%\presentation_request_config.json
 set AADVC_ISSUANCEFILE=%cd%\issuance_request_config.json
 
 rem get the tenant region scope and if it is an EU tenant, modify the endpoint 
-for /f "delims=" %%a in ('powershell .\GetTenantRegionScope.ps1 -TenantId %AADVC_TenantId%') do Set "AADVC_TenantRegionScope=%%a"
+for /f "delims=" %%a in ('powershell -executionpolicy RemoteSigned -File .\GetTenantRegionScope.ps1 -TenantId %AADVC_TenantId%') do Set "AADVC_TenantRegionScope=%%a"
 if "%AADVC_TenantRegionScope%" == "EU" set hostNameRegion=eu.
 
 set AADVC_ApiEndpoint=https://beta.%hostNameRegion%did.msidentity.com/v1.0/{0}/verifiablecredentials/request
