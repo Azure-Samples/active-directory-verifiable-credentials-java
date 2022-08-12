@@ -2,14 +2,8 @@
 export AADVC_TenantId=<YOUR-AAD-TENANDID>
 export AADVC_ClientID=<YOUR-AAD-CLIENTID-FOR-KEYVAULT-ACCESS>
 export AADVC_ApiKey=$(uuidgen)
-
-hostNameRegion=""
-tenantRegionScope=$(curl https://login.microsoftonline.com/$AADVC_TenantId/v2.0/.well-known/openid-configuration | sed -e 's/[{}]/''/g' | awk -v k="text" '{n=split($0,a,","); for (i=1; i<=n; i++) print a[i]}' | grep tenant_region_scope | cut -d ':' -f 2 | sed -e 's/"//g')
-if [[ "$tenantRegionScope" == "EU" ]]; then
-    hostNameRegion=.eu
-fi
-export AADVC_ApiEndpoint="https://beta$hostNameRegion.did.msidentity.com/v1.0/{0}/verifiablecredentials/request"
-export AADVC_CREDENTIALMANIFEST="https://beta$hostNameRegion.did.msidentity.com/v1.0/$AADVC_TenantId/verifiableCredential/contracts/<YOUR-CREDENTIAL-NAME>"
+export AADVC_ApiEndpoint=https://verifiedid.did.msidentity.com/v1.0/
+export AADVC_CREDENTIALMANIFEST=<YOUR-CREDENTIAL-MANIFEST-URL>
 
 docker run --rm -it -p 8080:8080 \
     -e AADVC_TenantId=$AADVC_TenantId \

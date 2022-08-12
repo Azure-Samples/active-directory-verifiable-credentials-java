@@ -77,12 +77,13 @@
                                     // QR Code scanned
                                     if (respMsg.status == 'request_retrieved') {
                                         document.getElementById('message-wrapper').style.display = "block";
+                                        document.getElementById("qrcode").getElementsByTagName("img")[0].style.opacity = "0.1";
                                         document.getElementById('qrText').style.display = "none";
-                                        document.getElementById('qrcode').style.display = "none";
                                         document.getElementById('message').innerHTML = respMsg.message;
                                     }
                                     
                                     if (respMsg.status == 'presentation_verified') {
+                                        document.getElementById('qrcode').style.display = "none";
                                         document.getElementById('message').innerHTML = respMsg.message;
                                         document.getElementById('payload').innerHTML = "Payload: " + JSON.stringify(respMsg.payload);
                                         document.getElementById('subject').innerHTML = respMsg.firstName +" " + respMsg.lastName +" is a Verifiable Credential Expert";
