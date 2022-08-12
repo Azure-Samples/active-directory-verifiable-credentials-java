@@ -125,7 +125,7 @@ public class IssuerController {
             ex.printStackTrace();
             return null;
         }
-        String endpoint = apiEndpoint.replace("{0}", tenantId );
+        String endpoint = apiEndpoint.replace("http://", "https://" ) + "verifiableCredentials/createIssuanceRequest";
         lgr.info( "callVCClientAPI: " + endpoint + "\n" + payload );
         WebClient client = WebClient.create();
         WebClient.ResponseSpec responseSpec = client.post()
@@ -207,7 +207,7 @@ public class IssuerController {
         try {
             JsonNode rootNode = objectMapper.readTree( jsonRequest );
             if (fromMobile(request)) {
-                ((ObjectNode)(rootNode.path("issuance"))).remove("pin");
+                ((ObjectNode)rootNode).remove("pin");
             }
             ((ObjectNode)rootNode).put("authority", issuerAuthority );
             // modify the callback method to make it easier to debug
@@ -222,22 +222,22 @@ public class IssuerController {
             // get the manifest from the application.properties (envvars), this is the URL to the credential created in the azure portal.
             // the display and rules file to create the credential can be dound in the credentialfiles directory
             // make sure the credentialtype in the issuance payload ma
-            ((ObjectNode)(rootNode.path("issuance"))).put("manifest", credentialManifest );
+            ((ObjectNode)rootNode).put("manifest", credentialManifest );
             // check if pin is required, if found make sure we set a new random pin
             // pincode is only used when the payload contains claim value pairs which results in an IDTokenhint
-            if ( rootNode.path("issuance").has("pin") ) {
-                pinCodeLength = rootNode.path("issuance").path("pin").path("length").asInt();
+            if ( rootNode.has("pin") ) {
+                pinCodeLength = rootNode.path("pin").path("length").asInt();
                 if ( pinCodeLength <= 0) {
-                    ((ObjectNode)rootNode.path("issuance")).remove("pin");
+                    ((ObjectNode)rootNode).remove("pin");
                 } else {
                     pinCode = generatePinCode( pinCodeLength );
-                    ((ObjectNode)(rootNode.path("issuance").path("pin"))).put("value", pinCode );
+                    ((ObjectNode)(rootNode.path("pin"))).put("value", pinCode );
                 }
             }
             // here you could change the payload manifest and change the firstname and lastname. The fieldNames should match your Rules definition
-            if ( rootNode.path("issuance").has("claims") ) {
-                ((ObjectNode)(rootNode.path("issuance").path("claims"))).put("given_name", "Megan" );
-                ((ObjectNode)(rootNode.path("issuance").path("claims"))).put("family_name", "Bowen" );
+            if ( rootNode.has("claims") ) {
+                ((ObjectNode)(rootNode.path("claims"))).put("given_name", "Megan" );
+                ((ObjectNode)(rootNode.path("claims"))).put("family_name", "Bowen" );
             }
             // The VC Request API is an authenticated API. We need to clientid and secret to create an access token which
             // needs to be send as bearer to the VC Request API
@@ -287,27 +287,27 @@ public class IssuerController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body( "api-key wrong or missing" );
             }
             JsonNode presentationResponse = objectMapper.readTree( body );
-            String code = presentationResponse.path("code").asText();
+            String requestStatus = presentationResponse.path("requestStatus").asText();
             ObjectNode data = null;
             // there are 2 different callbacks. 1 if the QR code is scanned (or deeplink has been followed)
             // Scanning the QR code makes Authenticator download the specific request from the server
             // the request will be deleted from the server immediately.
             // That's why it is so important to capture this callback and relay this to the UI so the UI can hide
             // the QR code to prevent the user from scanning it twice (resulting in an error since the request is already deleted)
-            if ( code.equals( "request_retrieved" )  ) {
+            if ( requestStatus.equals( "request_retrieved" )  ) {
                 data = objectMapper.createObjectNode();
                 data.put("message", "QR Code is scanned. Waiting for issuance to complete..." );
             }
-            if ( code.equals("issuance_successful") ) {
+            if ( requestStatus.equals("issuance_successful") ) {
                 data = objectMapper.createObjectNode();
                 data.put("message", "Credential successfully issued" );
             }
-            if ( code.equals( "issuance_error" ) ) {
+            if ( requestStatus.equals( "issuance_error" ) ) {
                 data = objectMapper.createObjectNode();
                 data.put("message", presentationResponse.path("error").path("message").asText() );
             }
             if ( data != null ) {
-                data.put("status", code );
+                data.put("status", requestStatus );
                 cache.put( presentationResponse.path("state").asText(), objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(data) );
             }
         } catch (java.io.IOException ex) {

@@ -129,7 +129,7 @@ public class VerifierController {
             ex.printStackTrace();
             return null;
         }
-        String endpoint = apiEndpoint.replace("{0}", tenantId );
+        String endpoint = apiEndpoint.replace("http://", "https://" ) + "verifiableCredentials/createPresentationRequest";
         lgr.info( "callVCClientAPI: " + endpoint + "\n" + payload );
         WebClient client = WebClient.create();
         WebClient.ResponseSpec responseSpec = client.post()
@@ -213,7 +213,7 @@ public class VerifierController {
             // this means only that issuer should be trusted for the requested credentialtype
             // this value is an array in the payload, you can trust multiple issuers for the same credentialtype
             // very common to accept the test VCs and the Production VCs coming from different verifiable credential services
-            ((ArrayNode)(rootNode.path("presentation").path("requestedCredentials").get(0).path("acceptedIssuers"))).set( 0, new TextNode( issuerAuthority ) );
+            ((ArrayNode)(rootNode.path("requestedCredentials").get(0).path("acceptedIssuers"))).set( 0, new TextNode( issuerAuthority ) );
             String payload = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode);
             responseBody = callVCClientAPI( payload );
             JsonNode apiResponse = objectMapper.readTree( responseBody );
@@ -254,14 +254,14 @@ public class VerifierController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body( "api-key wrong or missing" );
             }
             JsonNode presentationResponse = objectMapper.readTree( body );
-            String code = presentationResponse.path("code").asText();
+            String requestStatus = presentationResponse.path("requestStatus").asText();
             ObjectNode data = null;
             // there are 2 different callbacks. 1 if the QR code is scanned (or deeplink has been followed)
             // Scanning the QR code makes Authenticator download the specific request from the server
             // the request will be deleted from the server immediately.
             // That's why it is so important to capture this callback and relay this to the UI so the UI can hide
             // the QR code to prevent the user from scanning it twice (resulting in an error since the request is already deleted)            
-            if ( code.equals( "request_retrieved" ) ) {
+            if ( requestStatus.equals( "request_retrieved" ) ) {
                 data = objectMapper.createObjectNode();
                 data.put("message", "QR Code is scanned. Waiting for validation..." );
             }
@@ -269,17 +269,17 @@ public class VerifierController {
             // typically here is where the business logic is written to determine what to do with the result
             // the response in this callback contains the claims from the Verifiable Credential(s) being presented by the user
             // In this case the result is put in the in memory cache which is used by the UI when polling for the state so the UI can be updated.
-            if ( code.equals( "presentation_verified") ) {
+            if ( requestStatus.equals( "presentation_verified") ) {
                 data = objectMapper.createObjectNode();
                 data.put("message", "Presentation received" );
-                data.set("payload", presentationResponse.path("issuers") ); 
+                data.set("payload", presentationResponse.path("verifiedCredentialsData") ); 
                 data.put("subject", presentationResponse.path("subject").asText() );
-                data.put("firstName", presentationResponse.path("issuers").get(0).path("claims").path("firstName").asText() );
-                data.put("lastName", presentationResponse.path("issuers").get(0).path("claims").path("lastName").asText() );
+                data.put("firstName", presentationResponse.path("verifiedCredentialsData").get(0).path("claims").path("firstName").asText() );
+                data.put("lastName", presentationResponse.path("verifiedCredentialsData").get(0).path("claims").path("lastName").asText() );
                 data.set("presentationResponse", presentationResponse );
             }
             if ( data != null ) {
-                data.put("status", code );
+                data.put("status", requestStatus );
                 cache.put( presentationResponse.path("state").asText(), objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(data) );
             }
         } catch (java.io.IOException ex) {
@@ -361,11 +361,11 @@ public class VerifierController {
             // The type collection always 2..n entries where [0] is the generic base type 'VerifiableCredentials'.
             // We take the last type to pass back for simplicity
             String credentialType = "";
-            for (JsonNode arrayElement : cacheData.path("presentationResponse").path("issuers").get(0).path("type")) {
+            for (JsonNode arrayElement : cacheData.path("presentationResponse").path("verifiedCredentialsData").get(0).path("type")) {
                 credentialType = arrayElement.asText();
             }
             // get the claims from the VC and add a few extra claims that we pass back to B2C
-            JsonNode vcClaims = cacheData.path("presentationResponse").path("issuers").get(0).path("claims");
+            JsonNode vcClaims = cacheData.path("presentationResponse").path("verifiedCredentialsData").get(0).path("claims");
             ((ObjectNode)vcClaims).put("vcType", credentialType);
             ((ObjectNode)vcClaims).put("vcIss", cacheData.path("presentationResponse").path("subject").asText() );
             ((ObjectNode)vcClaims).put("vcSub", didSubject);
