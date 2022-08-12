@@ -4,20 +4,18 @@ languages:
 - java
 - powershell
 products:
-- active-directory
-- verifiable credentials
+- Entra
+- Verified ID
 description: "A code sample demonstrating issuance and verification of verifiable credentials."
 urlFragment: "active-directory-verifiable-credentials-java"
 ---
 # Verifiable Credentials Code Sample
 
-This code sample demonstrates how to use Microsoft's Azure Active Directory Verifiable Credentials preview to issue and consume verifiable credentials. 
+This code sample demonstrates how to use Microsoft's Entra Verified ID to issue and consume verifiable credentials. 
 
 ## About this sample
 
-Welcome to Azure Active Directory Verifiable Credentials. In this sample, we'll teach you to issue your first verifiable credential: a Verified Credential Expert Card. You'll then use this card to prove to a verifier that you are a Verified Credential Expert, mastered in the art of digital credentialing. The sample uses the preview REST API which supports ID Token hints to pass a payload for the verifiable credential.
-
-> **Important**: Azure Active Directory Verifiable Credentials is currently in public preview. This preview version is provided without a service level agreement, and it's not recommended for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
+Welcome to Microsoft Entra Verified ID (former Azure Active Directory Verifiable Credentials). In this sample, we'll teach you to issue your first verifiable credential: a Verified Credential Expert Card. You'll then use this card to prove to a verifier that you are a Verified Credential Expert, mastered in the art of digital credentialing. The sample uses the preview REST API which supports ID Token hints to pass a payload for the verifiable credential.
 
 ## Contents
 
@@ -82,14 +80,14 @@ You can find the instructions on how to create a Verifiable Credential in the az
 Make sure you copy the value of the credential URL after you created the credential in the portal. 
 
 Copy the URL in the `CredentialManifest` part of the `run.cmd` and/or `run.sh`. If you plan to use docker, copy it to `docker-run.cmd` and/or `docker-run.sh`. 
-You need to manually copy your Microsoft AAD Verifiable Credential service created Decentralized Identifier (did:ion..) value from this page as well and paste that in the `run.cmd` and/or `run.sh` file for `IssuerAuthority` and `VerifierAuthority`. If you plan to use docker, copy it to `docker-run.cmd` and/or `docker-run.sh`
+You need to manually copy your Microsoft Entra Verified ID service created Decentralized Identifier (did:ion..) value from this page as well and paste that in the `run.cmd` and/or `run.sh` file for `IssuerAuthority` and `VerifierAuthority`. If you plan to use docker, copy it to `docker-run.cmd` and/or `docker-run.sh`
 
 ### API Payloads
 The API is called with special payloads for issuing and verifying verifiable credentials. The sample payload files are modified by the sample code by copying the correct values defined in the `appliction.properties` file and set as environment variables before you run the app.
 If you want to modify the payloads `issuance_request_config.json` and `presentation_request_config.json` files yourself, make sure you comment out the code overwriting the values in the VerifierController.java and IssuerController.java files. The code overwrites the Authority, Manifest and trustedIssuers values. The callback URI is modified in code to match your hostname.
 
 The file [run.cmd](run.cmd) is a template for setting all environment variables and running your Java Spring Boot application.
-Make sure you change the values for `AADVC.TenantId`, `AADVC.ClientID` and `AADVC.ClientSecret` and set them to the values from the app registration you created above. Then, there are two other variables that reference files used as templates for issuance and verification. You need to update them too. 
+Make sure you change the values for `AADVC_TenantId`, `AADVC_ClientID` and `AADVC_ClientSecret` and set them to the values from the app registration you created above. Then, there are two other variables that reference files used as templates for issuance and verification. You need to update them too. 
 
 ## Running the sample
 
