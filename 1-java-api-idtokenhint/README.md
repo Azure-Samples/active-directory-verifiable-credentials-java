@@ -167,6 +167,90 @@ WebClient.ResponseSpec responseSpec = client.post()
 String responseBody = responseSpec.bodyToMono(String.class).block();    
 ```
 
+## Deploying the sample to Azure AppServices
+If you deploy the sample to **Azure AppServices**, as an alternative to using [ngrok](https://docs.microsoft.com/en-us/azure/active-directory/verifiable-credentials/verifiable-credentials-faq#i-can-not-use-ngrok-what-do-i-do), you can either deploy via the Maven plugin or follow these steps to do it manually.
+
+1. Create an Azure AppService instance with **Runtime stack** = `Java11` and **OS** = `Linux`
+1. When the AppService is deployed, go to **Deployment Center** and switch to **FTPS Credentials**. Save FTPS Endpoint, Username and Password
+1. Use a FTP tool like FileZilla to upload the below files to remote folder **/site/wwwroot**. FTP mode needs to be Passive.
+    1. `target/java-aadvc-api-idtokenhint-0.0.1-SNAPSHOT.jar`
+    1. `issuance_request_config.json` (after you have made changes to it)
+    1. `presentation_request_config.json` (after you have made changes to it)
+1. In the portal for the AppService, go to **Configuration > General Settings** and add `java -jar /home/site/wwwroot/java-aadvc-api-idtokenhint-0.0.1-SNAPSHOT.jar` in the **Startup Command**. Don't press Save
+1. In the portal, switch to **Application Settings** for the **Configuration** and click on **Advanced edit** and add the below JSON. Notice that you need to edit values like `<YOUR:DID>`, etc. Make sure you press Save.
+
+```json
+[
+  {
+    "name": "AADVC_ApiEndpoint",
+    "value": "https://verifiedid.did.msidentity.com/v1.0/",
+    "slotSetting": false
+  },
+  {
+    "name": "AADVC_ApiKey",
+    "value": "<YOUR:APIKEY>",
+    "slotSetting": false
+  },
+  {
+    "name": "AADVC_CertKeyLocation",
+    "value": "/home/site/wwwroot/saadappcert.key",
+    "slotSetting": false
+  },
+  {
+    "name": "AADVC_CertLocation",
+    "value": "/home/site/wwwroot/aadappcert.crt",
+    "slotSetting": false
+  },
+  {
+    "name": "AADVC_CertName",
+    "value": "not_used_if_secret_is_set",
+    "slotSetting": false
+  },
+  {
+    "name": "AADVC_ClientID",
+    "value": "<YOUR:CLIENTID>",
+    "slotSetting": false
+  },
+  {
+    "name": "AADVC_ClientSecret",
+    "value": "<YOUR:CLIENTSECRET>",
+    "slotSetting": false
+  },
+  {
+    "name": "AADVC_CREDENTIALMANIFEST",
+    "value": "<YOUR:MANIFEST>",
+    "slotSetting": false
+  },
+  {
+    "name": "AADVC_ISSUANCEFILE",
+    "value": "/home/site/wwwroot/issuance_request_config.json",
+    "slotSetting": false
+  },
+  {
+    "name": "AADVC_ISSUERAUTHORITY",
+    "value": "<YOUR:DID>",
+    "slotSetting": false
+  },
+  {
+    "name": "AADVC_PRESENTATIONFILE",
+    "value": "/home/site/wwwroot/presentation_request_config.json",
+    "slotSetting": false
+  },
+  {
+    "name": "AADVC_TenantId",
+    "value": "<YOUR:TENANTID>",
+    "slotSetting": false
+  },
+  {
+    "name": "AADVC_VERIFIERAUTHORITY",
+    "value": "<YOUR:DID>",
+    "slotSetting": false
+  }
+]
+```
+
+If the app doesn't start, if you view the logs in AppServices LogStream, you may see the problem. See [docs](https://docs.microsoft.com/en-us/azure/app-service/configure-language-python#customize-build-automation).
+
 ## Troubleshooting
 
 ### Did you forget to provide admin consent? This is needed for confidential apps

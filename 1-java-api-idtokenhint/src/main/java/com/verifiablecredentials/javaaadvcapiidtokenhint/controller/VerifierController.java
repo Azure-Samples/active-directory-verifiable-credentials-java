@@ -91,7 +91,7 @@ public class VerifierController {
     // helpers
     // *********************************************************************************
     public static String getBasePath(HttpServletRequest request) {
-        String basePath = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + "/";
+        String basePath = "https://" + request.getServerName() + "/";
         return basePath;
     }
 
