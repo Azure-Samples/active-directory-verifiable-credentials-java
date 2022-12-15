@@ -227,7 +227,9 @@ public class IssuerController {
             // pincode is only used when the payload contains claim value pairs which results in an IDTokenhint
             if ( rootNode.has("pin") ) {
                 pinCodeLength = rootNode.path("pin").path("length").asInt();
-                if ( pinCodeLength <= 0) {
+                // don't use pin if user is on mobile device
+                String userAgent = request.getHeader("user-agent");
+                if ( pinCodeLength <= 0 || userAgent.contains("Android") || userAgent.contains("iPhone") ) {
                     ((ObjectNode)rootNode).remove("pin");
                 } else {
                     pinCode = generatePinCode( pinCodeLength );
