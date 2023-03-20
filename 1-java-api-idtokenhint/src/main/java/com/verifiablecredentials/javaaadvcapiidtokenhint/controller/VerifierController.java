@@ -90,7 +90,7 @@ public class VerifierController {
     // *********************************************************************************
     // helpers
     // *********************************************************************************
-    public static String getBasePath(HttpServletRequest request) {
+    public static String getBasePath(HttpServletRequest request) {        
         String basePath = "https://" + request.getServerName() + "/";
         return basePath;
     }
@@ -105,6 +105,13 @@ public class VerifierController {
         lgr.info( method + " " + requestURL );
     }
 
+    private String base64Decode( String base64String ) {
+        if ( (base64String.length()%4) > 0  ) {
+            base64String += "====".substring((base64String.length()%4));
+        }
+        return new String(Base64.getUrlDecoder().decode(base64String), StandardCharsets.UTF_8);
+    } 
+    
     private static String readFileAllText(String filePath) 
     {
         StringBuilder contentBuilder = new StringBuilder();
@@ -199,6 +206,11 @@ public class VerifierController {
         ObjectMapper objectMapper = new ObjectMapper();
         String responseBody = "";
         try {
+            ObjectNode data = objectMapper.createObjectNode();
+            data.put("status", "request_created" );
+            data.put("message", "Waiting for QR code to be scanned" );
+            cache.put( correlationId, objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(data) );
+
             JsonNode rootNode = objectMapper.readTree( jsonRequest );
             // modify the callback method to make it easier to debug 
             // with tools like ngrok since the URI changes all the time
@@ -277,10 +289,29 @@ public class VerifierController {
                 data.put("firstName", presentationResponse.path("verifiedCredentialsData").get(0).path("claims").path("firstName").asText() );
                 data.put("lastName", presentationResponse.path("verifiedCredentialsData").get(0).path("claims").path("lastName").asText() );
                 data.set("presentationResponse", presentationResponse );
+                if ( presentationResponse.has("receipt") ) {
+                    String vp_token = base64Decode( presentationResponse.path("receipt").path("vp_token").asText().split("\\.")[1] );
+                    JsonNode vpToken = objectMapper.readTree( vp_token );  
+                    String vc = base64Decode( vpToken.path("vp").path("verifiableCredential").get(0).asText().split("\\.")[1] );
+                    JsonNode vcToken = objectMapper.readTree( vc );  
+                    data.put( "jti", vcToken.path("jti").asText() );
+                    data.put( "iat", vcToken.path("iat").asText() );
+                    data.put( "exp", vcToken.path("exp").asText() );
+                }
             }
             if ( data != null ) {
-                data.put("status", requestStatus );
-                cache.put( presentationResponse.path("state").asText(), objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(data) );
+                String id = presentationResponse.path("state").asText();
+                String dataChk = cache.getIfPresent( id ); // id == correlationId
+                if ( dataChk == null ) {
+                    lgr.info( "Unknown state: " + id );
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body( "Unknown state" );
+                } else {
+                    data.put("status", requestStatus );
+                    cache.put( id, objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(data) );
+                }
+            } else {
+                lgr.info( "Unsupported requestStatus" );
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body( "Unsupported requestStatus" );
             }
         } catch (java.io.IOException ex) {
             ex.printStackTrace();
@@ -314,10 +345,11 @@ public class VerifierController {
                 ObjectNode statusResponse = objectMapper.createObjectNode();
                 statusResponse.put("status", cacheData.path("status").asText() );
                 statusResponse.put("message", cacheData.path("message").asText() );
-                statusResponse.put("firstName", cacheData.path("firstName").asText() );
-                statusResponse.put("lastName", cacheData.path("lastName").asText() );
                 statusResponse.put("subject", cacheData.path("subject").asText() );
                 statusResponse.set("payload", cacheData.path("payload") );
+                statusResponse.put("jti", cacheData.path("jti").asText() );
+                statusResponse.put("iat", cacheData.path("iat").asText() );
+                statusResponse.put("exp", cacheData.path("exp").asText() );
                 responseBody = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(statusResponse);
             } catch (java.io.IOException ex) {
                 ex.printStackTrace();
@@ -384,6 +416,40 @@ public class VerifierController {
 
     private String formatB2CError( String message ) {
         return "{\"version\": \"1.0.0\", \"status\": 400, \"userMessage\": \"{0}}\"}".replace( "{0}", message );
+    }
+
+    @GetMapping("/api/verifier/get-presentation-details")
+    public ResponseEntity<String> getPresentationDetals( HttpServletRequest request
+                                            , @RequestHeader HttpHeaders headers ) {
+        traceHttpRequest( request );
+        String responseBody = "";
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            String jsonRequest = cache.getIfPresent("presentationJsonFIle");
+            if ( jsonRequest == null || jsonRequest.isEmpty() ) {
+                lgr.info( "presentationJsonFIle=" + presentationJsonFIle );
+                jsonRequest = readFileAllText( presentationJsonFIle );
+            }
+            if ( jsonRequest == null || jsonRequest.isEmpty() ) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body( "Presentation request file not found" );        
+            }
+            JsonNode rootNode = objectMapper.readTree( jsonRequest );                       
+            ObjectNode data = objectMapper.createObjectNode();
+            data.put("clientName", rootNode.path("registration").path("clientName").asText() );
+            data.put("purpose", rootNode.path("registration").path("purpose").asText() );
+            data.put("VerifierAuthority", verifierAuthority ); 
+            data.put("type", rootNode.path("requestedCredentials").get(0).path("type").asText() );
+            data.put("acceptedIssuers", rootNode.path("requestedCredentials").get(0).path("acceptedIssuers") );
+            responseBody = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(data);
+        } catch (java.io.IOException ex) {
+            ex.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body( "Technical error" );
+        }
+        HttpHeaders responseHeaders = new HttpHeaders();
+        responseHeaders.set("Content-Type", "application/json");
+        return ResponseEntity.ok()
+          .headers(responseHeaders)
+          .body( responseBody );
     }
 
 } // cls
