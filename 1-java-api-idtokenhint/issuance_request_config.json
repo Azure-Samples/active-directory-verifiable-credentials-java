@@ -9,8 +9,9 @@
   },
   "authority": "did:ion: THIS IS YOUR DID FROM THE VC PAGE IN AZURE PORTAL WHICH IS SET IN THE run.cmd/sh OR docker-run.cmd/sh files",
   "registration": {
-    "clientName": "Verifiable Credential Expert Sample"
-  },
+    "clientName": "Java sample Issuer",
+    "purpose": "Please accept the card to prove you are an expert"
+},
   "type": "VerifiedCredentialExpert",
   "manifest": "CREDENTIAL MANIFEST URL IN THIS SAMPLE WILL SET IN THE run.cmd/sh OR docker-run.cmd/sh files",
   "pin": {

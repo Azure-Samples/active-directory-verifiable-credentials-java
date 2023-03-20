@@ -48,9 +48,6 @@ public class IssuerController {
     @Value("${aadvc_IssuanceFile}")
     private String IssuanceJsonFile;
 
-    @Value("${aadvc_ApiEndpoint}")
-    private String apiEndpoint;
-
     @Value("${aadvc_TenantId}")
     private String tenantId;
 
@@ -75,6 +72,9 @@ public class IssuerController {
     @Value("${aadvc_CertKeyLocation}")
     private String certKeyLocation;
 
+    @Value("${aadvc_ApiEndpoint}")
+    private String apiEndpoint;
+
     @Value("${aadvc_Authority}")
     private String aadAuthority;
 
@@ -98,8 +98,16 @@ public class IssuerController {
         if (queryString != null) {
             requestURL += "?" + queryString;
         }
+        
         lgr.info( method + " " + requestURL );
     }
+
+    private String base64Decode( String base64String ) {
+        if ( (base64String.length()%4) > 0  ) {
+            base64String += "====".substring((base64String.length()%4));
+        }
+        return new String(Base64.getUrlDecoder().decode(base64String), StandardCharsets.UTF_8);
+    } 
 
     private static String readFileAllText(String filePath)
     {
@@ -134,6 +142,18 @@ public class IssuerController {
                                                     .header("Authorization", "Bearer " + accessToken)
                                                     .accept(MediaType.APPLICATION_JSON)
                                                     .body(BodyInserters.fromObject(payload))
+                                                    .retrieve();
+        String responseBody = responseSpec.bodyToMono(String.class).block();
+        lgr.info( responseBody );
+        return responseBody;
+    }
+
+    private String downloadManifest( String manifestURL ) {
+        lgr.info( "manifestURL: " + manifestURL );
+        WebClient client = WebClient.create();
+        WebClient.ResponseSpec responseSpec = client.get()
+                                                    .uri( manifestURL )
+                                                    .accept(MediaType.APPLICATION_JSON)
                                                     .retrieve();
         String responseBody = responseSpec.bodyToMono(String.class).block();
         lgr.info( responseBody );
@@ -199,12 +219,17 @@ public class IssuerController {
         }
         String callback = getBasePath( request ) + "api/issuer/issue-request-callback";
         String correlationId = java.util.UUID.randomUUID().toString();
-        String payload = "{}";
         ObjectMapper objectMapper = new ObjectMapper();
+        String payload = "{}";
         Integer pinCodeLength = 0;
         String pinCode = null;
         String responseBody = "";
         try {
+            ObjectNode data = objectMapper.createObjectNode();
+            data.put("status", "request_created" );
+            data.put("message", "Waiting for QR code to be scanned" );
+            cache.put( correlationId, objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(data) );
+        
             JsonNode rootNode = objectMapper.readTree( jsonRequest );
             if (fromMobile(request)) {
                 ((ObjectNode)rootNode).remove("pin");
@@ -238,8 +263,13 @@ public class IssuerController {
             }
             // here you could change the payload manifest and change the firstname and lastname. The fieldNames should match your Rules definition
             if ( rootNode.has("claims") ) {
-                ((ObjectNode)(rootNode.path("claims"))).put("given_name", "Megan" );
-                ((ObjectNode)(rootNode.path("claims"))).put("family_name", "Bowen" );
+                ObjectNode claims = ((ObjectNode)rootNode.path("claims"));
+                if ( claims.has("given_name") ) {
+                    claims.put("given_name", "Megan" );
+                }
+                if ( claims.has("family_name") ) {
+                    claims.put("family_name", "Bowen" );
+                }
             }
             // The VC Request API is an authenticated API. We need to clientid and secret to create an access token which
             // needs to be send as bearer to the VC Request API
@@ -288,8 +318,8 @@ public class IssuerController {
                 lgr.info( "api-key wrong or missing" );
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body( "api-key wrong or missing" );
             }
-            JsonNode presentationResponse = objectMapper.readTree( body );
-            String requestStatus = presentationResponse.path("requestStatus").asText();
+            JsonNode issuanceResponse = objectMapper.readTree( body );
+            String requestStatus = issuanceResponse.path("requestStatus").asText();
             ObjectNode data = null;
             // there are 2 different callbacks. 1 if the QR code is scanned (or deeplink has been followed)
             // Scanning the QR code makes Authenticator download the specific request from the server
@@ -306,11 +336,21 @@ public class IssuerController {
             }
             if ( requestStatus.equals( "issuance_error" ) ) {
                 data = objectMapper.createObjectNode();
-                data.put("message", presentationResponse.path("error").path("message").asText() );
+                data.put("message", issuanceResponse.path("error").path("message").asText() );
             }
             if ( data != null ) {
-                data.put("status", requestStatus );
-                cache.put( presentationResponse.path("state").asText(), objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(data) );
+                String id = issuanceResponse.path("state").asText();
+                String dataChk = cache.getIfPresent( id ); // id == correlationId
+                if ( dataChk == null ) {
+                    lgr.info( "Unknown state: " + id );
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body( "Unknown state" );
+                } else {
+                    data.put("status", requestStatus );
+                    cache.put( id, objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(data) );
+                }                
+            } else {
+                lgr.info( "Unsupported requestStatus" );
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body( "Unsupported requestStatus" );
             }
         } catch (java.io.IOException ex) {
             ex.printStackTrace();
@@ -355,4 +395,29 @@ public class IssuerController {
           .headers(responseHeaders)
           .body( responseBody );
     }
+
+    @GetMapping("/api/issuer/get-manifest")
+    public ResponseEntity<String> getManifest( HttpServletRequest request
+                                            , @RequestHeader HttpHeaders headers ) {
+        traceHttpRequest( request );
+        String manifest = cache.getIfPresent( "manifest" );
+        if ( manifest == null ) {
+            String responseBody = downloadManifest(credentialManifest);
+            ObjectMapper objectMapper = new ObjectMapper();
+            try {
+                JsonNode resp = objectMapper.readTree( responseBody );
+                manifest = base64Decode( resp.path("token").asText().split("\\.")[1] );
+                cache.put( "manifest", manifest );
+            } catch (java.io.IOException ex) {
+                ex.printStackTrace();
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body( "Technical error" );
+            }
+        }
+        HttpHeaders responseHeaders = new HttpHeaders();
+        responseHeaders.set("Content-Type", "application/json");
+        return ResponseEntity.ok()
+          .headers(responseHeaders)
+          .body( manifest );
+    }
+
 } // cls

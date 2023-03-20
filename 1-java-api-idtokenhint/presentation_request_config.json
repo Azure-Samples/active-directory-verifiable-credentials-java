@@ -9,15 +9,14 @@
   },
   "authority": "did:ion: THIS IS YOUR DID FROM THE VC PAGE IN AZURE PORTAL WHICH IS SET IN THE run.cmd/sh OR docker-run.cmd/sh files",
   "registration": {
-    "clientName": "Veriable Credential Expert Verifier",
-    "purpose": "So we can see that you a veriable credentials expert"
-  },
+    "clientName": "Java sample Verifier",
+    "purpose": "So we can see that you a verifiable credentials expert"
+},
   
   "includeReceipt": false,
   "requestedCredentials": [
     {
       "type": "VerifiedCredentialExpert",
-      "purpose": "So we can see that you a veriable credentials expert",
       "acceptedIssuers": [ "did:ion: copied from your VC portal in this sample the code copies it from APPSETTINGS.JSON" ]
     }
   ],
