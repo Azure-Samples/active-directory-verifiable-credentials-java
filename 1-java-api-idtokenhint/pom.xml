@@ -15,7 +15,7 @@
 	<description>Java sample for VC Client API</description>
 
 	<properties>
-		<java.version>11</java.version>
+		<!--<java.version>20</java.version>-->
 	</properties>
 
 	<dependencies>
