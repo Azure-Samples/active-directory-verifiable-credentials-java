@@ -17,6 +17,17 @@ This code sample demonstrates how to use Microsoft's Entra Verified ID to issue 
 
 Welcome to Microsoft Entra Verified ID (former Azure Active Directory Verifiable Credentials). In this sample, we'll teach you to issue your first verifiable credential: a Verified Credential Expert Card. You'll then use this card to prove to a verifier that you are a Verified Credential Expert, mastered in the art of digital credentialing. The sample uses the preview REST API which supports ID Token hints to pass a payload for the verifiable credential.
 
+## Deploy to Azure
+
+Complete the [setup](#Setup) before deploying to Azure so that you have all the required parameters.
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2Factive-directory-verifiable-credentials-java%2Fmain%2F1-java-api-idtokenhint%2FARMTemplate%2Ftemplate.json)
+
+You will be asked to enter some parameters during deployment about your app registration and your Verified ID details. You will find these values in the admin portal. 
+What the parameter values are is explained further down in [this](#update-appsettingsjson) section.
+
+![Deployment Parameters](ReadmeFiles/DeployToAzure.png)
+
 ## Contents
 
 The project is divided in 2 parts, one for issuance and one for verifying a verifiable credential. Depending on the scenario you need you can remove 1 part. To verify if your environment is completely working you can use both parts to issue a verifiedcredentialexpert VC and verify that as well.
