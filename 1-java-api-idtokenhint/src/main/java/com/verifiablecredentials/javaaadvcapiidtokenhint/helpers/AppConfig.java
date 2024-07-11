@@ -1,5 +1,7 @@
 package com.verifiablecredentials.javaaadvcapiidtokenhint.helpers;
 
+import java.util.*;
+
 public class AppConfig {
     private static String aadAuthority = System.getenv( "AzureAD__aadAuthority");
     private static String tenantId = System.getenv("AzureAD__tenantId" );
@@ -74,11 +76,14 @@ public class AppConfig {
     }    
     public static String getPurpose() {
         if ( purpose == null || (purpose != null && purpose.isEmpty() ) ) {
-            return "Java Sample app";
+            return "To test Verified ID";
         }
         return purpose;
     }    
     public static String getApiKey() {
+        if ( apiKey == null || (apiKey != null && apiKey.isEmpty() ) ) {
+            apiKey = java.util.UUID.randomUUID().toString();
+        }
         return apiKey;
     }    
     public static String getCredentialType() {
