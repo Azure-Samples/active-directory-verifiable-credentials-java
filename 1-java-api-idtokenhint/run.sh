@@ -1,16 +1,20 @@
 #!/bin/bash
-export AADVC_TenantId=<YOUR-AAD-TENANDID>
-export AADVC_ClientID=<YOUR-AAD-CLIENTID-FOR-KEYVAULT-ACCESS>
-export AADVC_ClientSecret=<YOUR-AAD-CLIENTSECRET-FOR-KEYVAULT-ACCESS>
-export AADVC_CertName=<YOUR-CERTNAME>
-export AADVC_CertLocation=$(pwd)/AppCreationScripts/aadappcert.crt
-export AADVC_CertKeyLocation=$(pwd)/AppCreationScripts/aadappcert.key
-export AADVC_ApiKey=<YOUR-APIKEY>
-export AADVC_ISSUERAUTHORITY=<YOUR-did:ion>
-export AADVC_VERIFIERAUTHORITY=<VCs-did:ion>
-export AADVC_PRESENTATIONFILE=$(pwd)/presentation_request_config.json
-export AADVC_ISSUANCEFILE=$(pwd)/issuance_request_config.json
-export AADVC_ApiEndpoint=https://verifiedid.did.msidentity.com/v1.0/
-export AADVC_CREDENTIALMANIFEST=<YOUR-CREDENTIAL-MANIFEST-URL>
+export AzureAD__TenantId=<YOUR-ENTRA-TENANDID>
+export AzureAD__ClientID=<YOUR-ENTRA-CLIENTID>
+export AzureAD__ClientSecret=<YOUR-ENTRA-CLIENTSECRET>
+export AzureAD__CertName=<YOUR-CERTNAME_not_used_if_secret_is_set>
+export AzureAD__CertLocation=$(pwd)/AppCreationScripts/aadappcert.crt
+export AzureAD__CertKeyLocation=$(pwd)/AppCreationScripts/aadappcert.key
+export VerifiedID__ApiKey=$(uuidgen)
+export VerifiedID__DIDAUTHORITY=<YOUR-DID>
+export VerifiedID__ApiEndpoint=https://verifiedid.did.msidentity.com/v1.0/
+export VerifiedID__CREDENTIALMANIFEST=<YOUR-CREDENTIAL-MANIFEST-URL>
+export VerifiedID__CREDENTIALTYPE=VerifiedCredentialExpert
+export VerifiedID__ClientName="Java Sample App"
+export VerifiedID__Purpose="To test Verified ID"
+export VerifiedID__PinCodeLength=4
+export VerifiedID__PhotoClaimName=photo
+export VerifiedID__UseFaceCheck=false
 
+java -version
 java -jar ./target/java-aadvc-api-idtokenhint-0.0.1-SNAPSHOT.jar

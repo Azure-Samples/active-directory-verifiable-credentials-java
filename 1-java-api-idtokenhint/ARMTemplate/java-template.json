@@ -61,7 +61,7 @@
   "resources": [
       {
           "type": "Microsoft.Web/serverfarms",
-          "apiVersion": "2023-12-01",
+          "apiVersion": "2020-06-01",
           "name": "[variables('appServicePlanPortalName')]",
           "location": "[resourceGroup().location]",
           "sku": {
@@ -88,13 +88,34 @@
 
       {
           "type": "Microsoft.Web/sites",
-          "apiVersion": "2023-12-01",
+          "apiVersion": "2022-09-01",
           "name": "[parameters('webAppName')]",
           "location": "[resourceGroup().location]",
           "dependsOn": [
               "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanPortalName'))]"
           ],
           "kind": "app,linux",
+          "identity": {
+            "type": "SystemAssigned"
+          },
+
+					"resources": [
+						{
+							"type": "sourcecontrols",
+							"apiVersion": "2018-02-01",
+							"name": "web",
+							"location": "[resourceGroup().location]",
+							"dependsOn": [
+								"[resourceId('Microsoft.Web/sites', parameters('webAppName'))]"
+							],
+							"properties": {
+								"repoUrl": "[parameters('repoURL')]",
+								"branch": "[parameters('branch')]",
+								"isManualIntegration": true
+							}
+						}
+					],
+
           "properties": {
               "enabled": true,
               "hostNameSslStates": [
@@ -185,31 +206,15 @@
                         "value": "false"
                       }
                     ]          
-              },
-
-              "resources": [
-                  {
-                    "type": "sourcecontrols",
-                    "apiVersion": "2018-02-01",
-                    "name": "web",
-                    "location": "[resourceGroup().location]",
-                    "dependsOn": [
-                      "[resourceId('Microsoft.Web/sites', parameters('webAppName'))]"
-                    ],
-                    "properties": {
-                      "repoUrl": "[parameters('repoURL')]",
-                      "branch": "[parameters('branch')]",
-                      "isManualIntegration": true
-                    }
-                  }
-                ]
+              }
         
           }
+					
       },
 
       {
           "type": "Microsoft.Web/sites/basicPublishingCredentialsPolicies",
-          "apiVersion": "2023-12-01",
+          "apiVersion": "2022-09-01",
           "name": "[concat(parameters('webAppName'), '/ftp')]",
           "location": "[resourceGroup().location]",
           "dependsOn": [
@@ -222,7 +227,7 @@
 
       {
           "type": "Microsoft.Web/sites/basicPublishingCredentialsPolicies",
-          "apiVersion": "2023-12-01",
+          "apiVersion": "2022-09-01",
           "name": "[concat(parameters('webAppName'), '/scm')]",
           "location": "[resourceGroup().location]",
           "dependsOn": [
@@ -235,7 +240,7 @@
 
       {
           "type": "Microsoft.Web/sites/config",
-          "apiVersion": "2023-12-01",
+          "apiVersion": "2022-09-01",
           "name": "[concat(parameters('webAppName'), '/web')]",
           "location": "[resourceGroup().location]",
           "dependsOn": [
@@ -267,6 +272,7 @@
               "use32BitWorkerProcess": true,
               "webSocketsEnabled": false,
               "alwaysOn": true,
+							"appCommandLine": "bash /home/site/wwwroot/appservice-build-run.sh",
               "managedPipelineMode": "Integrated",
               "virtualApplications": [
                   {
@@ -317,7 +323,7 @@
 
       {
           "type": "Microsoft.Web/sites/hostNameBindings",
-          "apiVersion": "2023-12-01",
+          "apiVersion": "2022-09-01",
           "name": "[concat(parameters('webAppName'), '/', parameters('webAppName'), '.azurewebsites.net')]",
           "location": "[resourceGroup().location]",
           "dependsOn": [

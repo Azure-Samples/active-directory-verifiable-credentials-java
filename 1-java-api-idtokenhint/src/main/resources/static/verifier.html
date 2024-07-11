@@ -104,7 +104,7 @@
                             details = JSON.parse(message);
                             var acceptedIssuers = "Accepted issuer(s): any";
                             if ( details.acceptedIssuers.length > 0 ) {
-                                acceptedIssuers = "Accepted issuer(s): " + details.acceptedIssuers.join();
+                                acceptedIssuers = "Accepted issuer(s): " + details.acceptedIssuers;
                             }
                             document.getElementById('idTitle').innerHTML = "Presentation of credential type: " + details.type;
                             document.getElementById('idSubTitle').innerHTML = details.purpose;
