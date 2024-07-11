@@ -17,7 +17,7 @@ This code sample demonstrates how to use Microsoft Entra Verified ID to issue an
 
 Complete the [setup](#Setup) before deploying to Azure so that you have all the required parameters.
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2Factive-directory-verifiable-credentials-java%2Fmain%2F1-java-api-idtokenhint%2FARMTemplate%2Ftemplate.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2Factive-directory-verifiable-credentials-java%2Fmain%2F1-java-api-idtokenhint%2FARMTemplate%2Fjava-template.json)
 
 You will be asked to enter some parameters during deployment about your app registration and your Verified ID details. You will find these values in the admin portal.
 
@@ -59,7 +59,7 @@ $AppRole = $ApiServicePrincipal.AppRoles | Where-Object {$_.Value -eq $Permissio
 New-AzureAdServiceAppRoleAssignment -ObjectId $MSI.ObjectId -PrincipalId $MSI.ObjectId ` -ResourceId $ApiServicePrincipal.ObjectId -Id $AppRole.Id
 ```
 
-Restart the app after running the powershell script.
+You can run the above powershell in the Cloud shell terminal while the deployment is running. After deployment is completed, restart the App Services app so that it starts with Managed Identity. If you restart the app while the deployment is still running, you will break the deployment (check Log Stream window for activity).
 
 ## Setup
 
