@@ -16,20 +16,18 @@
 
                 <div style="text-align: center;">
                     <img src="VerifiedCredentialExpert-icon.png" height=200px; />
-                    <h1>Verifiable Credentials  Issuance and Verifier Sample</h1>
+                    <h1>Verifiable Credentials Issuance and Verifier Sample</h1>
             
                     <button type="button" id="idIssue" class="button">GET CREDENTIAL</button>
                     <button type="button" id="idVerify" class="button">VERIFY CREDENTIAL</button>
                     <script>
-                            var idIssue = document.getElementById('idIssue');
-                            var idVerify = document.getElementById('idVerify');
-                            idIssue.addEventListener('click', () => {
-                                window.location = "issuer.html?autoclick=1";
-                            })
-                            idVerify.addEventListener('click', () => {
-                                window.location = "verifier.html?autoclick=1";
-                            })
-                        </script>
+                        document.getElementById('idIssue').addEventListener('click', () => {
+                            window.location = "issuer.html";
+                        })
+                        document.getElementById('idVerify').addEventListener('click', () => {
+                            window.location = "verifier.html";
+                        })
+                    </script>
                 </div>
 
             </div>

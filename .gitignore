@@ -32,4 +32,7 @@ run.[Dd]evelopment.cmd
 run.[Dd]evelopment.sh
 docker.[Dd]evelopment.cmd
 docker.[Dd]evelopment.sh
+docker-run.[Dd]evelopment.cmd
+docker-run.[Dd]evelopment.sh
 .dev-config/
+.classpath

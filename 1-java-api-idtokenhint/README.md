@@ -11,58 +11,96 @@ urlFragment: "active-directory-verifiable-credentials-java"
 ---
 # Verifiable Credentials Code Sample
 
-This code sample demonstrates how to use Microsoft's Entra Verified ID to issue and consume verifiable credentials. 
+This code sample demonstrates how to use Microsoft Entra Verified ID to issue and consume verifiable credentials.
 
-## About this sample
+## Deploy to Azure
 
-Welcome to Microsoft Entra Verified ID (former Azure Active Directory Verifiable Credentials). In this sample, we'll teach you to issue your first verifiable credential: a Verified Credential Expert Card. You'll then use this card to prove to a verifier that you are a Verified Credential Expert, mastered in the art of digital credentialing. The sample uses the preview REST API which supports ID Token hints to pass a payload for the verifiable credential.
+Complete the [setup](#Setup) before deploying to Azure so that you have all the required parameters.
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2Factive-directory-verifiable-credentials-java%2Fmain%2F1-java-api-idtokenhint%2FARMTemplate%2Ftemplate.json)
+
+You will be asked to enter some parameters during deployment about your app registration and your Verified ID details. You will find these values in the admin portal.
+
+![Deployment Parameters](ReadmeFiles/DeployToAzure.png)
+
+You need to enter the following parameters:
+
+1. The app name. This needs to be globally unique as it will be part of your URL, like https://your-app-name.azurewebsites.net/
+1. Your DID for your Entra Verified ID authority. After setting up Verified ID, you find your DID [here](https://entra.microsoft.com/?#view/Microsoft_AAD_DecentralizedIdentity/IssuerSettingsBlade)
+1. The Credential Manifest URL for the [VerifiedCredentialExpert](https://entra.microsoft.com/#view/Microsoft_AAD_DecentralizedIdentity/CardsListBlade) credential type.
+
+The deployment will take a few minutes as the Java app is being built the first time. You can monitor the progress with `Log stream`.
+
+### Configuring Managed Identity
+
+1. Enable Managed Identity for your App Service app at `Settings` > `Identity`
+1. In portal.azure.com, open the `Cloud Shell` in powershell mode and run the following to grant your MSI service principal the permission to call Verified ID.
+
+```Powershell
+$TenantID="<YOUR TENANTID>"
+$YourAppName="<NAME OF YOUR AZURE WEBAPP>"
+
+#Do not change this values below
+#
+$ApiAppId = "3db474b9-6a0c-4840-96ac-1fceb342124f"
+$PermissionName = "VerifiableCredential.Create.All"
+ 
+# Install the module
+Install-Module AzureAD
+
+Connect-AzureAD -TenantId $TenantID
+
+$MSI = (Get-AzureADServicePrincipal -Filter "displayName eq '$YourAppName'")
+
+Start-Sleep -Seconds 10
+
+$ApiServicePrincipal = Get-AzureADServicePrincipal -Filter "appId eq '$ApiAppId'"
+$AppRole = $ApiServicePrincipal.AppRoles | Where-Object {$_.Value -eq $PermissionName -and $_.AllowedMemberTypes -contains "Application"}
+New-AzureAdServiceAppRoleAssignment -ObjectId $MSI.ObjectId -PrincipalId $MSI.ObjectId ` -ResourceId $ApiServicePrincipal.ObjectId -Id $AppRole.Id
+```
+
+Restart the app after running the powershell script.
+
+## Setup
+
+### Entra ID tenant
+
+You need an Entra ID tenant to get this sample to work. You can set up a [free tenant](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-create-new-tenant) unless you don't have one already.
+
+### Setup Verified ID
+
+[Setup Verified ID](https://learn.microsoft.com/en-us/entra/verified-id/verifiable-credentials-configure-tenant-quick) in your tenant and enable MyAccount. 
+You do not need to register an app or create a custom Verified ID credential schema.
+
+### Azure subscription
+
+The sample is intended to be deployed to [Azure App Services](https://learn.microsoft.com/en-us/azure/app-service/) 
+and use [Managed Identity](https://learn.microsoft.com/en-us/azure/app-service/overview-managed-identity) for authenticating and acquiring an access token to call Verified ID.
+You don't need to do an app registration in Entra ID.
 
 ## Contents
 
 The project is divided in 2 parts, one for issuance and one for verifying a verifiable credential. Depending on the scenario you need you can remove 1 part. To verify if your environment is completely working you can use both parts to issue a verifiedcredentialexpert VC and verify that as well.
 
-
 | Issuance | |
 |------|--------|
 | src\main\resources\static\issuer.html|The basic webpage containing the javascript to call the APIs for issuance. |
 | src\main\java\com\verifiablecredentials\javaaadvcapiidtokenhint\controller\IssuerController.java | This is the controller which contains the API called from the webpage. It calls the REST API after getting an access token through MSAL. |
-| issuance_request_config.json | The sample payload send to the server to start issuing a VC. |
 
 | Verification | |
 |------|--------|
 | src\main\resources\static\verifier.html | The website acting as the verifier of the verifiable credential. |
 | src\main\resources\static\presentation-verified.html | The webpage that displays the result of the presented VC |
 | src\main\java\com\verifiablecredentials\javaaadvcapiidtokenhint\controller\VerifierController.java | This is the controller which contains the API called from the webpage. It calls the REST API after getting an access token through MSAL and helps verifying the presented verifiable credential.
-| presentation_request_config.json | The sample payload send to the server to start issuing a vc.
 
-## Setup
+| Helpers | |
+|------|--------|
+| src\main\java\com\verifiablecredentials\javaaadvcapiidtokenhint\helpers\AppConfig.java | Handles retrieval of configuration variables. |
+| src\main\java\com\verifiablecredentials\javaaadvcapiidtokenhint\helpers\CacheHelper.java | Creates an in-memory cache for issuance and verification. |
+| src\main\java\com\verifiablecredentials\javaaadvcapiidtokenhint\helpers\MSALHelper.java | Helper for acquiring access tokens via MSAL. |
 
-Before you can run this sample make sure your environment is setup correctly, follow the instructions in the documentation [here](https://aka.ms/vcsample)
+## Setting up and running the sample locally
 
-### create application registration
-Run the [Configure.PS1](./AppCreationScripts/AppCreationScripts.md) powershell script in the AppCreationScripts directory or follow these manual steps to create an application registrations, give the application the correct permissions so it can access the Verifiable Credentials Request REST API:
-
-Register an application in Azure Active Directory: 
-1. Sign in to the Azure portal using either a work or school account or a personal Microsoft account.
-2. Navigate to the Microsoft identity platform for developers App registrations page.
-3.	Select New registration
-    -  In the Name section, enter a meaningful application name for your issuance and/or verification application
-    - In the supported account types section, select Accounts in this organizational directory only ({tenant name})
-    - Select Register to create the application
-4.	On the app overview page, find the Application (client) ID value and Directory (tenant) ID and record it for later.
-5.	From the Certificates & secrets page, in the Client secrets section, choose New client secret:
-    - Type a key description (for instance app secret)
-    - Select a key duration.
-    - When you press the Add button, the key value will be displayed, copy and save the value in a safe location.
-    - You’ll need this key later to configure the sample application. This key value will not be displayed again, nor retrievable by any other means, so record it as soon as it is visible from the Azure portal.
-6.	In the list of pages for the app, select API permissions
-    - Click the Add a permission button
-    - Search for APIs in my organization for 3db474b9-6a0c-4840-96ac-1fceb342124f or Verifiable Credential and click the “Verifiable Credentials Service Request”
-    - Click the “Application Permission” and expand “VerifiableCredential.Create.All”
-    - Click Grant admin consent for {tenant name} on top of the API/Permission list and click YES. This allows the application to get the correct permissions
-![Admin concent](ReadmeFiles/AdminConcent.PNG)
-
-## Setting up and running the sample
 To run the sample, clone the repository, compile & run it. It's callback endpoint must be publically reachable, and for that reason, use a tool like `ngrok` as a reverse proxy to reach your app.
 
 ```Powershell
@@ -70,25 +108,10 @@ git clone https://github.com/Azure-Samples/active-directory-verifiable-credentia
 cd active-directory-verifiable-credentials-java\1-java-api-idtokenhint
 ```
 
-### Create your credential
-To use the sample we need a configured Verifiable Credential in the azure portal.
-In the project directory CredentialFiles you will find the `VerifiedCredentialExpertDisplay.json` file and the `VerifiedCredentialExpertRules.json` file. Use these 2 files to create your own VerifiedCredentialExpert credential. 
-Before you upload the files, you need to modify the `VerifiedCredentialExpertRules.json` file.
-If you navigate to your [Verifiable Credentials](https://portal.azure.com/#blade/Microsoft_AAD_DecentralizedIdentity/InitialMenuBlade/issuerSettingsBlade) blade in azure portal, you can copy the Decentralized identifier (DID) string (did:ion..) and modify the value after "iss" on line 12. Save the file and follow the instructions how to create your first verifiable credential.
-
-You can find the instructions on how to create a Verifiable Credential in the azure portal [here](https://aka.ms/didfordevs)
-
-Make sure you copy the value of the credential URL after you created the credential in the portal. 
-
-Copy the URL in the `CredentialManifest` part of the `run.cmd` and/or `run.sh`. If you plan to use docker, copy it to `docker-run.cmd` and/or `docker-run.sh`. 
-You need to manually copy your Microsoft Entra Verified ID service created Decentralized Identifier (did:ion..) value from this page as well and paste that in the `run.cmd` and/or `run.sh` file for `IssuerAuthority` and `VerifierAuthority`. If you plan to use docker, copy it to `docker-run.cmd` and/or `docker-run.sh`
-
-### API Payloads
-The API is called with special payloads for issuing and verifying verifiable credentials. The sample payload files are modified by the sample code by copying the correct values defined in the `appliction.properties` file and set as environment variables before you run the app.
-If you want to modify the payloads `issuance_request_config.json` and `presentation_request_config.json` files yourself, make sure you comment out the code overwriting the values in the VerifierController.java and IssuerController.java files. The code overwrites the Authority, Manifest and trustedIssuers values. The callback URI is modified in code to match your hostname.
+### App configurations
 
 The file [run.cmd](run.cmd) is a template for setting all environment variables and running your Java Spring Boot application.
-Make sure you change the values for `AADVC_TenantId`, `AADVC_ClientID` and `AADVC_ClientSecret` and set them to the values from the app registration you created above. Then, there are two other variables that reference files used as templates for issuance and verification. You need to update them too. 
+Make sure you change the values for with values from your Entra Verified ID setup and your app registration.
 
 ## Running the sample
 
@@ -99,194 +122,16 @@ In order to build & run the sample, you need to have the [Java SDK](https://www.
 mvn clean package -DskipTests
 ```
 
-1. After you have edited the file [run.cmd](run.cmd), start the Java Springbot app by running this in the command prompt
+2. After you have edited the file [run.cmd](run.cmd), start the Java Springbot app by running this in the command prompt
 ```Powershell
 .\run.cmd
 ```
 
-1. Using a different command prompt, run ngrok to set up a URL on 8080. You can install ngrok globally from this [link](https://ngrok.com/download).
+3. Using a different command prompt, run ngrok to set up a URL on 8080. You can install ngrok globally from this [link](https://ngrok.com/download).
 ```Powershell
 ngrok http 8080
 ```
-1. Open the HTTPS URL generated by ngrok.
+
+4. Open the HTTPS URL generated by ngrok.
 ![API Overview](ReadmeFiles/ngrok-url-screen.png)
-The sample dynamically copies the hostname to be part of the callback URL, this way the VC Request service can reach your sample web application to execute the callback method.
 
-1. Select GET CREDENTIAL
-
-1. In Authenticator, scan the QR code. 
-> If this is the first time you are using Verifiable Credentials the Credentials page with the Scan QR button is hidden. You can use the `add account` button. Select `other` and scan the QR code, this will enable the preview of Verifiable Credentials in Authenticator.
-6. If you see the 'This app or website may be risky screen', select **Advanced**.
-1. On the next **This app or website may be risky** screen, select **Proceed anyways (unsafe)**.
-1. On the Add a credential screen, notice that:
-
-  - At the top of the screen, you can see a red **Not verified** message.
-  - The credential is based on the information you uploaded as the display file.
-
-9. Select **Add**.
-
-## Verify the verifiable credential by using the sample app
-1. Navigate back and click on the Verify Credential link
-2. Click Verify Credential button
-3. Scan the QR code
-4. select the VerifiedCredentialExpert credential and click allow
-5. You should see the result presented on the screen.
-
-## About the code
-Since the API is now a multi-tenant API it needs to receive an access token when it's called. 
-The endpoint of the API is https://beta.did.msidentity.com/v1.0/{YOURTENANTID}/verifiablecredentials/request 
-
-To get an access token we are using MSAL as library. MSAL supports the creation and caching of access token which are used when calling Azure Active Directory protected resources like the verifiable credential request API.
-Typicall calling the libary looks something like this:
-```Java
-ConfidentialClientApplication app = ConfidentialClientApplication.builder(
-        clientId,
-        ClientCredentialFactory.createFromSecret(clientSecret))
-        .authority(authority)
-        .build();
-ClientCredentialParameters clientCredentialParam = ClientCredentialParameters.builder(
-        Collections.singleton(scope))
-        .build();
-```
-And creating an access token:
-```Java
-CompletableFuture<IAuthenticationResult> future = app.acquireToken(clientCredentialParam);
-IAuthenticationResult result = future.get();
-```
-> **Important**: At this moment the scope needs to be: **3db474b9-6a0c-4840-96ac-1fceb342124f/.default** This might change in the future
-
-Calling the API looks like this:
-```Java
-WebClient client = WebClient.create();
-WebClient.ResponseSpec responseSpec = client.post()
-                                            .uri( endpoint )
-                                            .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                                            .header("Authorization", "Bearer " + accessToken)
-                                            .accept(MediaType.APPLICATION_JSON)
-                                            .body(BodyInserters.fromObject(payload))
-                                            .retrieve();
-String responseBody = responseSpec.bodyToMono(String.class).block();    
-```
-
-## Deploying the sample to Azure AppServices
-If you deploy the sample to **Azure AppServices**, as an alternative to using [ngrok](https://docs.microsoft.com/en-us/azure/active-directory/verifiable-credentials/verifiable-credentials-faq#i-can-not-use-ngrok-what-do-i-do), you can either deploy via the Maven plugin or follow these steps to do it manually.
-
-1. Create an Azure AppService instance with **Runtime stack** = `Java11` and **OS** = `Linux`
-1. When the AppService is deployed, go to **Deployment Center** and switch to **FTPS Credentials**. Save FTPS Endpoint, Username and Password
-1. Use a FTP tool like FileZilla to upload the below files to remote folder **/site/wwwroot**. FTP mode needs to be Passive.
-    1. `target/java-aadvc-api-idtokenhint-0.0.1-SNAPSHOT.jar`
-    1. `issuance_request_config.json` (after you have made changes to it)
-    1. `presentation_request_config.json` (after you have made changes to it)
-1. In the portal for the AppService, go to **Configuration > General Settings** and add `java -jar /home/site/wwwroot/java-aadvc-api-idtokenhint-0.0.1-SNAPSHOT.jar` in the **Startup Command**. Don't press Save
-1. In the portal, switch to **Application Settings** for the **Configuration** and click on **Advanced edit** and add the below JSON. Notice that you need to edit values like `<YOUR:DID>`, etc. Make sure you press Save.
-
-```json
-[
-  {
-    "name": "AADVC_ApiEndpoint",
-    "value": "https://verifiedid.did.msidentity.com/v1.0/",
-    "slotSetting": false
-  },
-  {
-    "name": "AADVC_ApiKey",
-    "value": "<YOUR:APIKEY>",
-    "slotSetting": false
-  },
-  {
-    "name": "AADVC_CertKeyLocation",
-    "value": "/home/site/wwwroot/saadappcert.key",
-    "slotSetting": false
-  },
-  {
-    "name": "AADVC_CertLocation",
-    "value": "/home/site/wwwroot/aadappcert.crt",
-    "slotSetting": false
-  },
-  {
-    "name": "AADVC_CertName",
-    "value": "not_used_if_secret_is_set",
-    "slotSetting": false
-  },
-  {
-    "name": "AADVC_ClientID",
-    "value": "<YOUR:CLIENTID>",
-    "slotSetting": false
-  },
-  {
-    "name": "AADVC_ClientSecret",
-    "value": "<YOUR:CLIENTSECRET>",
-    "slotSetting": false
-  },
-  {
-    "name": "AADVC_CREDENTIALMANIFEST",
-    "value": "<YOUR:MANIFEST>",
-    "slotSetting": false
-  },
-  {
-    "name": "AADVC_ISSUANCEFILE",
-    "value": "/home/site/wwwroot/issuance_request_config.json",
-    "slotSetting": false
-  },
-  {
-    "name": "AADVC_ISSUERAUTHORITY",
-    "value": "<YOUR:DID>",
-    "slotSetting": false
-  },
-  {
-    "name": "AADVC_PRESENTATIONFILE",
-    "value": "/home/site/wwwroot/presentation_request_config.json",
-    "slotSetting": false
-  },
-  {
-    "name": "AADVC_TenantId",
-    "value": "<YOUR:TENANTID>",
-    "slotSetting": false
-  },
-  {
-    "name": "AADVC_VERIFIERAUTHORITY",
-    "value": "<YOUR:DID>",
-    "slotSetting": false
-  }
-]
-```
-
-If the app doesn't start, if you view the logs in AppServices LogStream, you may see the problem. See [docs](https://docs.microsoft.com/en-us/azure/app-service/configure-language-python#customize-build-automation).
-
-## Troubleshooting
-
-### Did you forget to provide admin consent? This is needed for confidential apps
-If you get an error when calling the API `Insufficient privileges to complete the operation.`, this is because the tenant administrator has not granted permissions
-to the application. See step 6 of 'Register the client app' above.
-
-You will typically see, on the output window, something like the following:
-
-```Json
-Failed to call the Web Api: Forbidden
-Content: {
-  "error": {
-    "code": "Authorization_RequestDenied",
-    "message": "Insufficient privileges to complete the operation.",
-    "innerError": {
-      "request-id": "<a guid>",
-      "date": "<date>"
-    }
-  }
-}
-```
-
-### Understanding what's going on
-As a first source of information, the Java sample will trace output into the console window of all HTTP calls it receives. Then a good tip is to use Edge/Chrome/Firefox dev tools functionality found under F12 and watch the Network tab for traffic going from the browser to the Java app.
-
-## Best practices
-When deploying applications which need client credentials and use secrets or certificates the more secure practice is to use certificates. If you are hosting your application on azure make sure you check how to deploy managed identities. This takes away the management and risks of secrets in your application.
-You can find more information here:
-- [Integrate a daemon app with Key Vault and MSI](https://github.com/Azure-Samples/active-directory-dotnetcore-daemon-v2/tree/master/3-Using-KeyVault)
-
-
-## More information
-
-For more information, see MSAL.NET's conceptual documentation:
-
-- [Quickstart: Register an application with the Microsoft identity platform](https://docs.microsoft.com/azure/active-directory/develop/quickstart-register-app)
-- [Quickstart: Configure a client application to access web APIs](https://docs.microsoft.com/azure/active-directory/develop/quickstart-configure-app-access-web-apis)
-- [Acquiring a token for an application with client credential flows](https://aka.ms/msal-net-client-credentials)
