@@ -2,7 +2,9 @@ package com.verifiablecredentials.javaaadvcapiidtokenhint.controller;
 
 import java.util.*;
 import java.util.logging.*;
+import java.security.MessageDigest;
 import java.nio.charset.StandardCharsets;
+import java.security.NoSuchAlgorithmException;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -25,6 +27,7 @@ public class IssuerController {
     private static final Logger lgr = Logger.getLogger(IssuerController.class.getName());
 
     private static Cache<String, String> cache = CacheHelper.getCache(); 
+    private String pinCodeText;
 
     // *********************************************************************************
     // helpers
@@ -51,6 +54,18 @@ public class IssuerController {
         }
         return new String(Base64.getUrlDecoder().decode(base64String), StandardCharsets.UTF_8);
     } 
+
+    private String Sha256Hash(String source) {
+         MessageDigest md;
+        try {
+            md = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalArgumentException(e);
+        }
+        byte[] hashBytes = md.digest(source.getBytes(StandardCharsets.UTF_8));
+        String hash = Base64.getEncoder().encodeToString(hashBytes);
+        return hash;
+    }
 
     private String callRequestServiceAPI( String payload ) {
         String accessToken = "";
@@ -116,7 +131,7 @@ public class IssuerController {
 
         request.callback = new Callback();
         request.callback.url = getBasePath( httpRequest ) + "api/issuer/issue-request-callback";
-        request.callback.state = java.util.UUID.randomUUID().toString();;
+        request.callback.state = java.util.UUID.randomUUID().toString();
         request.callback.headers = new Headers();
         request.callback.headers.apiKey = AppConfig.getApiKey();
 
@@ -125,12 +140,21 @@ public class IssuerController {
 
         request.claims = claims;
 
+        this.pinCodeText = null;
         if ( !fromMobile(httpRequest) ) {
             int pinCodeLength = AppConfig.getPinCodeLength();
             if ( pinCodeLength > 0 ) {
                 request.pin = new Pin();
-                request.pin.length = pinCodeLength;
-                request.pin.value = generatePinCode( pinCodeLength );
+                request.pin.length = pinCodeLength;                
+                this.pinCodeText = generatePinCode( pinCodeLength );
+                if ( AppConfig.getHashPinCode()) {
+                    request.pin.salt = java.util.UUID.randomUUID().toString();
+                    request.pin.alg = "sha256";
+                    request.pin.iterations = 1;
+                    request.pin.value = Sha256Hash( request.pin.salt + this.pinCodeText);
+                } else {
+                    request.pin.value = this.pinCodeText;
+                }
             }
         }
 
@@ -164,7 +188,7 @@ public class IssuerController {
             RequestAPIResponse issuanceResponse = objectMapper.readValue(responseBody, RequestAPIResponse.class);
             issuanceResponse.id = correlationId;
             if ( issuanceRequest.pin != null  ) {
-                issuanceResponse.pin = issuanceRequest.pin.value;
+                issuanceResponse.pin = this.pinCodeText;
             }
             responseBody = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(issuanceResponse);
             lgr.info( responseBody );

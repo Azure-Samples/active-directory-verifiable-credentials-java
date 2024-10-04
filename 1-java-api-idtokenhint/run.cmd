@@ -12,6 +12,7 @@ set VerifiedID__CREDENTIALTYPE=VerifiedCredentialExpert
 set VerifiedID__ClientName=Java Sample App
 set VerifiedID__Purpose=To test Verified ID
 set VerifiedID__PinCodeLength=4
+set VerifiedID__HashPinCode=false
 set VerifiedID__PhotoClaimName=photo
 set VerifiedID__UseFaceCheck=false
 

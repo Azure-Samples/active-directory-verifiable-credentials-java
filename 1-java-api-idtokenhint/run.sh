@@ -13,6 +13,7 @@ export VerifiedID__CREDENTIALTYPE=VerifiedCredentialExpert
 export VerifiedID__ClientName="Java Sample App"
 export VerifiedID__Purpose="To test Verified ID"
 export VerifiedID__PinCodeLength=4
+export VerifiedID__HashPinCode=false
 export VerifiedID__PhotoClaimName=photo
 export VerifiedID__UseFaceCheck=false
 

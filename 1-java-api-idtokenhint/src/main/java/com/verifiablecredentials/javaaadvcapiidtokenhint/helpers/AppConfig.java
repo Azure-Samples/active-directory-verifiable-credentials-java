@@ -19,6 +19,7 @@ public class AppConfig {
     private static String purpose = System.getenv("VerifiedID__purpose");
     private static String manifestUrl = System.getenv("VerifiedID__credentialManifest");
     private static String pinCodeLength = System.getenv("VerifiedID__pinCodeLength");        
+    private static String hashPinCode = System.getenv("VerifiedID__HashPinCode");        
     private static String photoClaimName = System.getenv("VerifiedID__photoClaimName");        
     private static String useFaceCheck = System.getenv("VerifiedID__useFaceCheck");        
 
@@ -100,6 +101,13 @@ public class AppConfig {
             pcl = 0;
         }    
         return pcl;
+    }    
+    public static Boolean getHashPinCode() {
+        if ( hashPinCode != null && !hashPinCode.isEmpty() ) {
+            return Boolean.parseBoolean(hashPinCode);
+        } else {
+            return false;
+        }
     }    
     public static String getPhotoClaimName() {
         return photoClaimName;
